@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create a game - Cubit</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <a class="topbar-brand" href="index.html">Cubit</a>
+        <nav class="topbar-nav" aria-label="Main navigation">
+            <a href="index.html">Home</a>
+            <a href="games.html">Games</a>
+            <a id="createGameLink" href="create.html" aria-current="page" hidden>Create game</a>
+            <div id="topbarAccount" class="topbar-account" hidden>
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <section id="loginRequired" class="auth-container">
+            <h1 class="auth-title">Sign in required</h1>
+            <p>Sign in to create a game.</p>
+            <a href="index.html">Go to sign in</a>
+        </section>
+
+        <section id="gameWorkspace" class="auth-container" hidden>
+            <h1 class="auth-title">Create a game</h1>
+            <p id="statusMessage" class="status-message" aria-live="polite"></p>
+
+            <form id="gameCreateForm" class="game-form" novalidate>
+                <label for="gameTitle">Game name</label>
+                <input id="gameTitle" name="title" type="text" maxlength="80" required>
+                <label for="worldFile">World file (.json, max 1 MB)</label>
+                <input id="worldFile" name="world" type="file" accept=".json,application/json" required>
+                <label for="gameVisibility">Visibility</label>
+                <select id="gameVisibility" name="visibility">
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                </select>
+                <button class="submit-btn" type="submit">Create game</button>
+            </form>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js" defer></script>
+</body>
+</html>

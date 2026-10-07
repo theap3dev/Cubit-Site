@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game - Cubit</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <a class="topbar-brand" href="index.html">Cubit</a>
+        <nav class="topbar-nav" aria-label="Main navigation">
+            <a href="index.html">Home</a>
+            <a href="games.html">Games</a>
+            <a id="createGameLink" href="create.html" hidden>Create game</a>
+            <div id="topbarAccount" class="topbar-account" hidden>
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="game-detail">
+        <a class="game-detail-back" href="games.html">Back to games</a>
+        <p id="statusMessage" class="status-message" aria-live="polite">Loading game...</p>
+
+        <article id="gameDetail" hidden>
+            <header class="game-detail-header">
+                <div>
+                    <h1 id="gameTitleDisplay"></h1>
+                    <p id="gameVisibilityDisplay"></p>
+                </div>
+                <button id="editGameButton" class="submit-btn" type="button" hidden>Edit game</button>
+            </header>
+
+            <section id="worldView" class="world-view">
+                <h2>World JSON</h2>
+                <pre id="worldPreview" class="world-preview"></pre>
+            </section>
+
+            <form id="gameEditForm" class="game-form" hidden novalidate>
+                <h2>Edit game</h2>
+                <label for="editGameTitle">Game name</label>
+                <input id="editGameTitle" name="title" type="text" maxlength="80" required>
+                <label for="editWorldFile">Replace world file (.json, max 1 MB, optional)</label>
+                <input id="editWorldFile" name="world" type="file" accept=".json,application/json">
+                <label for="editGameVisibility">Visibility</label>
+                <select id="editGameVisibility" name="visibility">
+                    <option value="private">Private</option>
+                    <option value="public">Public</option>
+                </select>
+                <div class="game-edit-actions">
+                    <button class="submit-btn" type="submit">Save changes</button>
+                    <button id="cancelEditButton" class="cancel-edit-btn" type="button">Cancel</button>
+                </div>
+            </form>
+        </article>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js" defer></script>
+</body>
+</html>

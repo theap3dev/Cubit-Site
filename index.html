@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cubit</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <a class="topbar-brand" href="index.html">Cubit</a>
+        <nav class="topbar-nav" aria-label="Main navigation">
+            <a href="games.html">Games</a>
+            <a id="createGameLink" href="create.html" hidden>Create game</a>
+            <div id="topbarAccount" class="topbar-account" hidden>
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="auth-container">
+        <h1 class="auth-title">Cubit</h1>
+
+        <div class="auth-tabs" role="tablist" aria-label="Account access">
+            <button class="tab-btn active" type="button" data-tab="signin" role="tab" aria-selected="true">Sign in</button>
+            <button class="tab-btn" type="button" data-tab="signup" role="tab" aria-selected="false">Sign up</button>
+        </div>
+
+        <p id="statusMessage" class="status-message" aria-live="polite"></p>
+
+        <form id="signInForm" class="auth-form active" novalidate>
+            <h2>Sign in</h2>
+            <label for="signin-email">Email</label>
+            <input id="signin-email" name="email" type="email" autocomplete="email" required>
+            <label for="signin-password">Password</label>
+            <input id="signin-password" name="password" type="password" autocomplete="current-password" required>
+            <button class="submit-btn" type="submit">Sign in</button>
+        </form>
+
+        <form id="signUpForm" class="auth-form" hidden novalidate>
+            <h2>Create an account</h2>
+            <label for="signup-name">Username</label>
+            <input id="signup-name" name="username" type="text" autocomplete="username" required>
+            <label for="signup-email">Email</label>
+            <input id="signup-email" name="email" type="email" autocomplete="email" required>
+            <label for="signup-password">Password</label>
+            <input id="signup-password" name="password" type="password" autocomplete="new-password" required>
+            <button class="submit-btn" type="submit">Create account</button>
+        </form>
+
+        <section id="signedInState" class="signed-in-state" hidden>
+            <h2>You are signed in</h2>
+            <p>Open Create game in the top bar to continue.</p>
+        </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js" defer></script>
+</body>
+</html>

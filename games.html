@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Games - Cubit</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header class="topbar">
+        <a class="topbar-brand" href="index.html">Cubit</a>
+        <nav class="topbar-nav" aria-label="Main navigation">
+            <a href="index.html">Home</a>
+            <a href="games.html" aria-current="page">Games</a>
+            <a id="createGameLink" href="create.html" hidden>Create game</a>
+            <div id="topbarAccount" class="topbar-account" hidden>
+                <span id="userEmail"></span>
+                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
+            </div>
+        </nav>
+    </header>
+
+    <main class="games-page">
+        <h1>Games</h1>
+        <p id="statusMessage" class="status-message" aria-live="polite">Loading games...</p>
+        <ul id="gamesList" class="game-list" aria-label="Available games"></ul>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js" defer></script>
+</body>
+</html>
