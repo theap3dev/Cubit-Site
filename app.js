@@ -201,7 +201,8 @@ async function loadGameDetail() {
     return;
   }
 
-  const gameId = new URLSearchParams(window.location.search).get('id');
+  const query = new URLSearchParams(window.location.search.replace('?apijson', '&apijson'));
+  const gameId = query.get('id');
 
   if (!gameId) {
     setStatus('Choose a game from the Games page.', 'error');
@@ -230,6 +231,15 @@ async function loadGameDetail() {
   }
 
   currentGame = data;
+  if (query.has('apijson')) {
+    const jsonOutput = document.createElement('pre');
+    jsonOutput.textContent = JSON.stringify(data.world_data, null, 2);
+    document.body.replaceChildren(jsonOutput);
+    document.body.style.cssText = 'margin: 8px; background: #fff; color: #000; font: 13px monospace;';
+    document.title = `${data.title} - Cubit JSON`;
+    return;
+  }
+
   const isOwner = currentUser?.id === data.owner_id;
   gameTitleDisplay.textContent = data.title;
   gameVisibilityDisplay.textContent = isOwner ? data.visibility : 'public';
