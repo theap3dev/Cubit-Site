@@ -167,6 +167,7 @@ button {
 #gameDetail[hidden],
 #gameEditForm[hidden],
 #editGameButton[hidden],
+#deleteGameButton[hidden],
 #gameOverview[hidden] {
     display: none !important;
 }
@@ -619,6 +620,12 @@ button {
     max-width: 760px;
 }
 
+.game-owner-actions {
+    display: flex;
+    flex: 0 0 auto;
+    gap: 10px;
+}
+
 .game-detail-header h1 {
     margin: 0;
     color: #fff;
@@ -639,7 +646,8 @@ button {
 }
 
 .game-page-detail .submit-btn,
-.game-page-detail .cancel-edit-btn {
+.game-page-detail .cancel-edit-btn,
+.game-page-detail .delete-game-btn {
     min-height: 40px;
     margin: 0;
     padding: 8px 14px;
@@ -650,9 +658,19 @@ button {
     cursor: pointer;
 }
 
+.game-page-detail .delete-game-btn {
+    border-color: rgba(255, 145, 145, 0.5);
+    background: rgba(128, 35, 35, 0.26);
+}
+
 .game-page-detail .submit-btn:hover,
-.game-page-detail .cancel-edit-btn:hover {
+.game-page-detail .cancel-edit-btn:hover,
+.game-page-detail .delete-game-btn:hover {
     background: rgba(255, 255, 255, 0.16);
+}
+
+.game-page-detail .delete-game-btn:hover {
+    background: rgba(160, 40, 40, 0.48);
 }
 
 .game-page-detail .game-form {

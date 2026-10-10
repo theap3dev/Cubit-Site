@@ -39,6 +39,7 @@ const gamesList = document.getElementById('gamesList');
 const gameDetail = document.getElementById('gameDetail');
 const gameEditForm = document.getElementById('gameEditForm');
 const editGameButton = document.getElementById('editGameButton');
+const deleteGameButton = document.getElementById('deleteGameButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
 const gameTitleDisplay = document.getElementById('gameTitleDisplay');
 const gameVisibilityDisplay = document.getElementById('gameVisibilityDisplay');
@@ -271,6 +272,13 @@ function createHomeGameCard(game) {
   return article;
 }
 
+function renderGameListMessage(container, message) {
+  const emptyState = document.createElement('div');
+  emptyState.className = 'empty-state';
+  emptyState.textContent = message;
+  container.replaceChildren(emptyState);
+}
+
 async function loadHomeGames() {
   if (!document.body.classList.contains('home-page') || !supabaseClient) {
     return;
@@ -286,7 +294,7 @@ async function loadHomeGames() {
   try {
     const { data: games, error } = await supabaseClient
       .from('games')
-      .select('id, title, visibility, created_at, world_data, thumbnail_url')
+      .select('id, title, visibility, created_at, thumbnail_url')
       .order('created_at', { ascending: false })
       .limit(12);
 
@@ -297,13 +305,53 @@ async function loadHomeGames() {
       return;
     }
 
-    const recent = games?.slice(0, 4) || [];
     const active = games?.slice(0, 6) || [];
 
-    recentlyPlayedCards.replaceChildren(...recent.map(createHomeGameCard));
     mostActiveCards.replaceChildren(...active.map(createHomeGameCard));
+
+    if (!currentUser) {
+      renderGameListMessage(recentlyPlayedCards, 'Sign in to track recently played games.');
+    } else {
+      const { data: recentPlays, error: recentError } = await supabaseClient
+        .from('recently_played')
+        .select('game_id, last_played_at')
+        .eq('user_id', currentUser.id)
+        .order('last_played_at', { ascending: false })
+        .limit(4);
+
+      if (recentError) {
+        console.error('Failed to load recently played games:', recentError);
+        const message = recentError.code === '42P01' || recentError.code === 'PGRST205'
+          ? 'Run schema.sql to enable recently played games.'
+          : 'Could not load recently played games.';
+        renderGameListMessage(recentlyPlayedCards, message);
+      } else if (!recentPlays?.length) {
+        renderGameListMessage(recentlyPlayedCards, 'No recently played games yet.');
+      } else {
+        const gameIds = recentPlays.map((play) => play.game_id);
+        const { data: recentGames, error: recentGamesError } = await supabaseClient
+          .from('games')
+          .select('id, title, visibility, thumbnail_url')
+          .in('id', gameIds);
+
+        if (recentGamesError) {
+          console.error('Failed to load recently played game details:', recentGamesError);
+          renderGameListMessage(recentlyPlayedCards, 'Could not load recently played games.');
+        } else {
+          const gamesById = new Map((recentGames || []).map((game) => [game.id, game]));
+          const orderedRecentGames = gameIds
+            .map((gameId) => gamesById.get(gameId))
+            .filter(Boolean);
+          if (orderedRecentGames.length) {
+            recentlyPlayedCards.replaceChildren(...orderedRecentGames.map(createHomeGameCard));
+          } else {
+            renderGameListMessage(recentlyPlayedCards, 'No recently played games yet.');
+          }
+        }
+      }
+    }
+
     if (!games?.length) {
-      recentlyPlayedCards.innerHTML = '<div class="empty-state">No games found.</div>';
       mostActiveCards.innerHTML = '<div class="empty-state">No games found.</div>';
     }
   } catch (error) {
@@ -436,7 +484,7 @@ async function loadGameDetail() {
 
   const { data, error } = await supabaseClient
     .from('games')
-    .select('id, title, owner_id, visibility, created_at, world_data, thumbnail_url')
+    .select('id, title, owner_id, visibility, created_at, thumbnail_url')
     .eq('id', gameId)
     .maybeSingle();
 
@@ -454,6 +502,20 @@ async function loadGameDetail() {
   }
 
   currentGame = data;
+  if (currentUser?.id) {
+    const { error: recentPlayError } = await supabaseClient
+      .from('recently_played')
+      .upsert({
+        user_id: currentUser.id,
+        game_id: data.id,
+        last_played_at: new Date().toISOString()
+      }, { onConflict: 'user_id,game_id' });
+
+    if (recentPlayError) {
+      console.error('Could not record recently played game:', recentPlayError);
+    }
+  }
+
   const isOwner = currentUser?.id === data.owner_id;
   gameTitleDisplay.textContent = data.title;
   gameVisibilityDisplay.textContent = isOwner ? data.visibility : 'public';
@@ -469,6 +531,9 @@ async function loadGameDetail() {
     }
   }
   editGameButton.hidden = !isOwner;
+  if (deleteGameButton) {
+    deleteGameButton.hidden = !isOwner;
+  }
   gameDetail.hidden = false;
   document.title = `${data.title} - Cubit`;
   setStatus('');
@@ -548,6 +613,38 @@ editGameButton?.addEventListener('click', () => {
   gameOverview.hidden = true;
   gameEditForm.hidden = false;
   editGameButton.hidden = true;
+});
+
+deleteGameButton?.addEventListener('click', async () => {
+  if (!supabaseClient || !currentUser || currentGame?.owner_id !== currentUser.id) {
+    setStatus('Only the game owner can delete this game.', 'error');
+    return;
+  }
+
+  if (!window.confirm(`Delete "${currentGame.title}"? This cannot be undone.`)) {
+    return;
+  }
+
+  deleteGameButton.disabled = true;
+  setStatus('Deleting game...', 'info');
+
+  try {
+    const { error } = await supabaseClient
+      .from('games')
+      .delete()
+      .eq('id', currentGame.id);
+
+    if (error) {
+      setStatus(error.message, 'error');
+      deleteGameButton.disabled = false;
+      return;
+    }
+
+    window.location.href = 'games.html';
+  } catch (error) {
+    setStatus(error.message || 'Could not delete this game.', 'error');
+    deleteGameButton.disabled = false;
+  }
 });
 
 cancelEditButton?.addEventListener('click', () => {

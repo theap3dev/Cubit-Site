@@ -104,6 +104,36 @@ create policy games_delete_own
     on public.games for delete to authenticated
     using (owner_id = (select auth.uid()));
 
+create table if not exists public.recently_played (
+    user_id uuid not null references auth.users(id) on delete cascade,
+    game_id uuid not null references public.games(id) on delete cascade,
+    last_played_at timestamptz not null default now(),
+    primary key (user_id, game_id)
+);
+
+create index if not exists recently_played_user_last_played_idx
+    on public.recently_played (user_id, last_played_at desc);
+
+alter table public.recently_played enable row level security;
+
+grant select, insert, update on public.recently_played to authenticated;
+
+drop policy if exists recently_played_select_own on public.recently_played;
+create policy recently_played_select_own
+    on public.recently_played for select to authenticated
+    using (user_id = (select auth.uid()));
+
+drop policy if exists recently_played_insert_own on public.recently_played;
+create policy recently_played_insert_own
+    on public.recently_played for insert to authenticated
+    with check (user_id = (select auth.uid()));
+
+drop policy if exists recently_played_update_own on public.recently_played;
+create policy recently_played_update_own
+    on public.recently_played for update to authenticated
+    using (user_id = (select auth.uid()))
+    with check (user_id = (select auth.uid()));
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
     'game-thumbnails',
