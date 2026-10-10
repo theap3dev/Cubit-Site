@@ -34,6 +34,8 @@
             <form id="gameCreateForm" class="game-form" novalidate>
                 <label for="gameTitle">Game name</label>
                 <input id="gameTitle" name="title" type="text" maxlength="80" required>
+                <label for="gameThumbnail">Thumbnail (image, max 5 MB, optional)</label>
+                <input id="gameThumbnail" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
                 <label for="worldFile">World file (.json, max 1 MB)</label>
                 <input id="worldFile" name="world" type="file" accept=".json,application/json" required>
                 <label for="gameVisibility">Visibility</label>

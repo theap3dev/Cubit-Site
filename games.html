@@ -4,27 +4,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Games - Cubit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="home-page">
     <header class="topbar">
-        <a class="topbar-brand" href="index.html">Cubit</a>
-        <nav class="topbar-nav" aria-label="Main navigation">
-            <a href="index.html">Home</a>
-            <a href="games.html" aria-current="page">Games</a>
-            <a id="createGameLink" href="create.html" hidden>Create game</a>
-            <div id="topbarAccount" class="topbar-account" hidden>
-                <span id="userEmail"></span>
-                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
-            </div>
-        </nav>
+        <div class="topbar-left">
+            <button class="menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="true"></button>
+            <div class="brand-mark" aria-label="Cubit home">Cubit</div>
+        </div>
+
+        <div class="user-panel" aria-label="Current user">
+            <span class="user-name">ap3</span>
+            <button id="logoutBtn" class="logout-btn" type="button">[Logout]</button>
+        </div>
     </header>
 
-    <main class="games-page">
-        <h1>Games</h1>
-        <p id="statusMessage" class="status-message" aria-live="polite">Loading games...</p>
-        <ul id="gamesList" class="game-list" aria-label="Available games"></ul>
-    </main>
+    <div class="page-shell">
+        <aside class="sidebar" aria-label="Sidebar navigation">
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html#home">Home</a>
+                <a class="nav-item" href="index.html#users">Users</a>
+                <a class="nav-item active" href="games.html" aria-current="page">Games</a>
+            </nav>
+        </aside>
+
+        <main class="content" aria-label="Games">
+            <header class="section-header">
+                <h1>Games</h1>
+            </header>
+            <p id="statusMessage" class="status-message" aria-live="polite"></p>
+            <ul id="gamesList" class="game-list" aria-label="Available games"></ul>
+        </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js" defer></script>

@@ -4,56 +4,104 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cubit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <header class="topbar">
-        <a class="topbar-brand" href="index.html">Cubit</a>
-        <nav class="topbar-nav" aria-label="Main navigation">
-            <a href="games.html">Games</a>
-            <a id="createGameLink" href="create.html" hidden>Create game</a>
-            <div id="topbarAccount" class="topbar-account" hidden>
-                <span id="userEmail"></span>
-                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
+<body class="auth-page">
+    <div id="authShell" class="auth-shell">
+        <header class="topbar auth-topbar">
+            <div class="brand-mark" aria-label="Cubit home">Cubit</div>
+        </header>
+
+        <main class="auth-container">
+            <h1 class="auth-title">Cubit</h1>
+
+            <div class="auth-tabs" role="tablist" aria-label="Account access">
+                <button class="tab-btn active" type="button" data-tab="signin" role="tab" aria-selected="true">Sign in</button>
+                <button class="tab-btn" type="button" data-tab="signup" role="tab" aria-selected="false">Sign up</button>
             </div>
-        </nav>
-    </header>
 
-    <main class="auth-container">
-        <h1 class="auth-title">Cubit</h1>
+            <p id="statusMessage" class="status-message" aria-live="polite"></p>
 
-        <div class="auth-tabs" role="tablist" aria-label="Account access">
-            <button class="tab-btn active" type="button" data-tab="signin" role="tab" aria-selected="true">Sign in</button>
-            <button class="tab-btn" type="button" data-tab="signup" role="tab" aria-selected="false">Sign up</button>
+            <form id="signInForm" class="auth-form active" novalidate>
+                <h2>Sign in</h2>
+                <label for="signin-email">Email</label>
+                <input id="signin-email" name="email" type="email" autocomplete="email" required>
+                <label for="signin-password">Password</label>
+                <input id="signin-password" name="password" type="password" autocomplete="current-password" required>
+                <button class="submit-btn" type="submit">Sign in</button>
+            </form>
+
+            <form id="signUpForm" class="auth-form" hidden novalidate>
+                <h2>Create an account</h2>
+                <label for="signup-name">Username</label>
+                <input id="signup-name" name="username" type="text" autocomplete="username" required>
+                <label for="signup-email">Email</label>
+                <input id="signup-email" name="email" type="email" autocomplete="email" required>
+                <label for="signup-password">Password</label>
+                <input id="signup-password" name="password" type="password" autocomplete="new-password" required>
+                <button class="submit-btn" type="submit">Create account</button>
+            </form>
+
+            <section id="signedInState" class="signed-in-state" hidden>
+                <h2>You are signed in</h2>
+                <p>Open Create game in the top bar to continue.</p>
+            </section>
+        </main>
+    </div>
+
+    <div id="homeShell" class="home-shell" hidden>
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="true"></button>
+                <div class="brand-mark" aria-label="Cubit home">Cubit</div>
+            </div>
+
+            <div class="user-panel" aria-label="Current user">
+                <span class="user-name">ap3</span>
+                <button id="logoutBtn" class="logout-btn" type="button">[Logout]</button>
+            </div>
+        </header>
+
+        <div class="page-shell">
+            <aside class="sidebar" aria-label="Sidebar navigation">
+                <nav class="sidebar-nav">
+                    <button class="nav-item active" type="button" data-page="home">Home</button>
+                    <button class="nav-item" type="button" data-page="users">Users</button>
+                    <a class="nav-item" href="games.html">Games</a>
+                </nav>
+            </aside>
+
+            <main class="content" aria-label="Home dashboard content">
+                <div id="homeView" class="content-view active-view">
+                    <header class="welcome-row">
+                        <button class="welcome-icon" type="button" aria-label="Open profile"></button>
+                        <h1>Welcome, <span class="username">ap3</span></h1>
+                    </header>
+
+                    <section class="dashboard-section" aria-labelledby="recently-played-heading">
+                        <h2 id="recently-played-heading">Recently Played</h2>
+                        <div id="recentlyPlayedCards" class="card-row"></div>
+                    </section>
+
+                    <section class="dashboard-section" aria-labelledby="most-active-heading">
+                        <h2 id="most-active-heading">Most Active</h2>
+                        <div id="mostActiveCards" class="card-row wide-row"></div>
+                    </section>
+                </div>
+
+                <div id="usersView" class="content-view" hidden>
+                    <header class="section-header">
+                        <h1>Users</h1>
+                    </header>
+                    <div id="usersList" class="users-list"></div>
+                </div>
+
+            </main>
         </div>
-
-        <p id="statusMessage" class="status-message" aria-live="polite"></p>
-
-        <form id="signInForm" class="auth-form active" novalidate>
-            <h2>Sign in</h2>
-            <label for="signin-email">Email</label>
-            <input id="signin-email" name="email" type="email" autocomplete="email" required>
-            <label for="signin-password">Password</label>
-            <input id="signin-password" name="password" type="password" autocomplete="current-password" required>
-            <button class="submit-btn" type="submit">Sign in</button>
-        </form>
-
-        <form id="signUpForm" class="auth-form" hidden novalidate>
-            <h2>Create an account</h2>
-            <label for="signup-name">Username</label>
-            <input id="signup-name" name="username" type="text" autocomplete="username" required>
-            <label for="signup-email">Email</label>
-            <input id="signup-email" name="email" type="email" autocomplete="email" required>
-            <label for="signup-password">Password</label>
-            <input id="signup-password" name="password" type="password" autocomplete="new-password" required>
-            <button class="submit-btn" type="submit">Create account</button>
-        </form>
-
-        <section id="signedInState" class="signed-in-state" hidden>
-            <h2>You are signed in</h2>
-            <p>Open Create game in the top bar to continue.</p>
-        </section>
-    </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js" defer></script>

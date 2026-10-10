@@ -4,58 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game - Cubit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="home-page">
     <header class="topbar">
-        <a class="topbar-brand" href="index.html">Cubit</a>
-        <nav class="topbar-nav" aria-label="Main navigation">
-            <a href="index.html">Home</a>
-            <a href="games.html">Games</a>
-            <a id="createGameLink" href="create.html" hidden>Create game</a>
-            <div id="topbarAccount" class="topbar-account" hidden>
-                <span id="userEmail"></span>
-                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
-            </div>
-        </nav>
+        <div class="topbar-left">
+            <button class="menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="true"></button>
+            <div class="brand-mark" aria-label="Cubit home">Cubit</div>
+        </div>
+
+        <div class="user-panel" aria-label="Current user">
+            <span class="user-name">ap3</span>
+            <button id="logoutBtn" class="logout-btn" type="button">[Logout]</button>
+        </div>
     </header>
 
-    <main class="game-detail">
-        <a class="game-detail-back" href="games.html">Back to games</a>
-        <p id="statusMessage" class="status-message" aria-live="polite">Loading game...</p>
+    <div class="page-shell">
+        <aside class="sidebar" aria-label="Sidebar navigation">
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html#home">Home</a>
+                <a class="nav-item" href="index.html#users">Users</a>
+                <a class="nav-item active" href="games.html" aria-current="page">Games</a>
+            </nav>
+        </aside>
 
-        <article id="gameDetail" hidden>
-            <header class="game-detail-header">
-                <div>
-                    <h1 id="gameTitleDisplay"></h1>
-                    <p id="gameVisibilityDisplay"></p>
-                </div>
-                <button id="editGameButton" class="submit-btn" type="button" hidden>Edit game</button>
-            </header>
+        <main class="content" aria-label="Game details">
+            <p id="statusMessage" class="status-message" aria-live="polite">Loading game...</p>
 
-            <section id="worldView" class="world-view">
-                <h2>World JSON</h2>
-                <pre id="worldPreview" class="world-preview"></pre>
-            </section>
+            <article id="gameDetail" class="game-page-detail" hidden>
+                <a class="game-detail-back" href="games.html">Back to games</a>
+                <header class="game-detail-header">
+                    <div>
+                        <h1 id="gameTitleDisplay"></h1>
+                        <p id="gameVisibilityDisplay"></p>
+                    </div>
+                    <button id="editGameButton" class="submit-btn" type="button" hidden>Edit game</button>
+                </header>
 
-            <form id="gameEditForm" class="game-form" hidden novalidate>
-                <h2>Edit game</h2>
-                <label for="editGameTitle">Game name</label>
-                <input id="editGameTitle" name="title" type="text" maxlength="80" required>
-                <label for="editWorldFile">Replace world file (.json, max 1 MB, optional)</label>
-                <input id="editWorldFile" name="world" type="file" accept=".json,application/json">
-                <label for="editGameVisibility">Visibility</label>
-                <select id="editGameVisibility" name="visibility">
-                    <option value="private">Private</option>
-                    <option value="public">Public</option>
-                </select>
-                <div class="game-edit-actions">
-                    <button class="submit-btn" type="submit">Save changes</button>
-                    <button id="cancelEditButton" class="cancel-edit-btn" type="button">Cancel</button>
-                </div>
-            </form>
-        </article>
-    </main>
+                <section id="gameOverview" class="game-overview" aria-label="Game overview">
+                    <div id="gameThumbnailDisplay" class="game-detail-thumbnail" aria-label="Game thumbnail"></div>
+                </section>
+
+                <form id="gameEditForm" class="game-form" hidden novalidate>
+                    <h2>Edit game</h2>
+                    <label for="editGameTitle">Game name</label>
+                    <input id="editGameTitle" name="title" type="text" maxlength="80" required>
+                    <label for="editThumbnailFile">Replace thumbnail (image, max 5 MB, optional)</label>
+                    <input id="editThumbnailFile" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                    <label for="editWorldFile">Replace world file (.json, max 1 MB, optional)</label>
+                    <input id="editWorldFile" name="world" type="file" accept=".json,application/json">
+                    <label for="editGameVisibility">Visibility</label>
+                    <select id="editGameVisibility" name="visibility">
+                        <option value="private">Private</option>
+                        <option value="public">Public</option>
+                    </select>
+                    <div class="game-edit-actions">
+                        <button class="submit-btn" type="submit">Save changes</button>
+                        <button id="cancelEditButton" class="cancel-edit-btn" type="button">Cancel</button>
+                    </div>
+                </form>
+            </article>
+        </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js" defer></script>
