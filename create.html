@@ -4,49 +4,64 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Create a game - Cubit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="home-page">
     <header class="topbar">
-        <a class="topbar-brand" href="index.html">Cubit</a>
-        <nav class="topbar-nav" aria-label="Main navigation">
-            <a href="index.html">Home</a>
-            <a href="games.html">Games</a>
-            <a id="createGameLink" href="create.html" aria-current="page" hidden>Create game</a>
-            <div id="topbarAccount" class="topbar-account" hidden>
-                <span id="userEmail"></span>
-                <button id="signOutBtn" class="sign-out-btn" type="button">Sign out</button>
-            </div>
-        </nav>
+        <div class="topbar-left">
+            <button class="menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="true"></button>
+            <div class="brand-mark" aria-label="Cubit home">Cubit</div>
+        </div>
+
+        <div class="user-panel" aria-label="Current user">
+            <span class="user-name">ap3</span>
+            <button id="logoutBtn" class="logout-btn" type="button">[Logout]</button>
+        </div>
     </header>
 
-    <main>
-        <section id="loginRequired" class="auth-container">
-            <h1 class="auth-title">Sign in required</h1>
-            <p>Sign in to create a game.</p>
-            <a href="index.html">Go to sign in</a>
-        </section>
+    <div class="page-shell">
+        <aside class="sidebar" aria-label="Sidebar navigation">
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html#home">Home</a>
+                <a class="nav-item" href="index.html#users">Users</a>
+                <a class="nav-item" href="games.html">Games</a>
+                <a id="createGameLink" class="nav-item active" href="create.html" aria-current="page" hidden>Create game</a>
+            </nav>
+        </aside>
 
-        <section id="gameWorkspace" class="auth-container" hidden>
-            <h1 class="auth-title">Create a game</h1>
-            <p id="statusMessage" class="status-message" aria-live="polite"></p>
+        <main class="content create-page-content" aria-label="Create a game">
+            <section id="loginRequired" class="create-login-required">
+                <h1 class="section-title">Sign in required</h1>
+                <p>Sign in to create a game.</p>
+                <a class="create-signin-link" href="index.html">Go to sign in</a>
+            </section>
 
-            <form id="gameCreateForm" class="game-form" novalidate>
-                <label for="gameTitle">Game name</label>
-                <input id="gameTitle" name="title" type="text" maxlength="80" required>
-                <label for="gameThumbnail">Thumbnail (image, max 5 MB, optional)</label>
-                <input id="gameThumbnail" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-                <label for="worldFile">World file (.json, max 1 MB)</label>
-                <input id="worldFile" name="world" type="file" accept=".json,application/json" required>
-                <label for="gameVisibility">Visibility</label>
-                <select id="gameVisibility" name="visibility">
-                    <option value="private">Private</option>
-                    <option value="public">Public</option>
-                </select>
-                <button class="submit-btn" type="submit">Create game</button>
-            </form>
-        </section>
-    </main>
+            <section id="gameWorkspace" class="create-workspace" hidden>
+                <header class="section-header">
+                    <h1>Create a game</h1>
+                </header>
+                <p id="statusMessage" class="status-message" aria-live="polite"></p>
+
+                <form id="gameCreateForm" class="game-form" novalidate>
+                    <label for="gameTitle">Game name</label>
+                    <input id="gameTitle" name="title" type="text" maxlength="80" required>
+                    <label for="gameThumbnail">Thumbnail (image, max 5 MB, optional)</label>
+                    <input id="gameThumbnail" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                    <label for="worldFile">World file (.json, max 1 MB)</label>
+                    <input id="worldFile" name="world" type="file" accept=".json,application/json" required>
+                    <label for="gameVisibility">Visibility</label>
+                    <select id="gameVisibility" name="visibility">
+                        <option value="private">Private</option>
+                        <option value="public">Public</option>
+                    </select>
+                    <button class="submit-btn" type="submit">Create game</button>
+                </form>
+            </section>
+        </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js" defer></script>
