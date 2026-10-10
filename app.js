@@ -265,7 +265,7 @@ function createHomeGameCard(game) {
   title.textContent = game.title || 'Untitled game';
 
   const details = document.createElement('span');
-  details.textContent = game.visibility ? `${game.visibility}` : 'public';
+  details.textContent = '67';
 
   meta.append(title, details);
   article.append(box, meta);
@@ -403,9 +403,7 @@ async function loadGames() {
 
     const visibility = document.createElement('span');
     visibility.className = 'game-visibility';
-    visibility.textContent = game.owner_id === currentUser?.id
-      ? game.visibility
-      : 'public';
+    visibility.textContent = '67';
 
     const thumbnail = createGameThumbnail(game, 'game-list-thumbnail');
     heading.append(title, visibility);
