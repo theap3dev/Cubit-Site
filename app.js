@@ -180,6 +180,38 @@ function setActiveNavPage(pageName) {
   });
 }
 
+function navigateHomeRoute(route) {
+  if (window.location.hash === `#${route}`) {
+    handleHomeRoute();
+  } else {
+    window.location.hash = route;
+  }
+}
+
+function handleHomeRoute() {
+  const route = window.location.hash.slice(1);
+  const profilePrefix = 'profile/';
+
+  if (route.startsWith(profilePrefix)) {
+    let profileId = '';
+    try {
+      profileId = decodeURIComponent(route.slice(profilePrefix.length));
+    } catch {
+      profileId = '';
+    }
+    setActiveNavPage('profile');
+    loadUserProfile(profileId);
+    return;
+  }
+
+  const page = ['home', 'users'].includes(route) ? route : 'home';
+  setActiveNavPage(page);
+  document.title = 'Cubit';
+  if (page === 'users') {
+    loadUsers();
+  }
+}
+
 function createGameThumbnail(game, className) {
   const link = document.createElement('a');
   link.className = className;
@@ -210,8 +242,9 @@ function renderUsersList(users) {
   }
 
   users.forEach((user) => {
-    const row = document.createElement('div');
+    const row = document.createElement('a');
     row.className = 'user-row';
+    row.href = `#profile/${encodeURIComponent(user.id)}`;
 
     const avatar = document.createElement('span');
     avatar.className = 'mini-avatar';
@@ -222,6 +255,118 @@ function renderUsersList(users) {
     row.append(avatar, name);
     container.appendChild(row);
   });
+}
+
+function renderProfileGames(games) {
+  const container = document.getElementById('profileGames');
+  const count = document.getElementById('profileGameCount');
+  if (!container || !count) {
+    return;
+  }
+
+  count.textContent = `${games.length} ${games.length === 1 ? 'game' : 'games'}`;
+
+  if (!games.length) {
+    const emptyState = document.createElement('li');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = 'No games to show yet.';
+    container.replaceChildren(emptyState);
+    return;
+  }
+
+  const items = games.map((game) => {
+    const item = document.createElement('li');
+    item.className = 'game-item';
+
+    const thumbnail = createGameThumbnail(game, 'game-list-thumbnail');
+    const heading = document.createElement('div');
+    heading.className = 'game-item-heading';
+    const title = document.createElement('h2');
+    const titleLink = document.createElement('a');
+    titleLink.href = `game.html?id=${encodeURIComponent(game.id)}`;
+    titleLink.className = 'game-title-link';
+    titleLink.textContent = game.title || 'Untitled game';
+    title.appendChild(titleLink);
+    heading.appendChild(title);
+    item.append(thumbnail, heading);
+    return item;
+  });
+
+  container.replaceChildren(...items);
+}
+
+async function loadUserProfile(profileId) {
+  const avatar = document.getElementById('profileAvatar');
+  const username = document.getElementById('profileUsername');
+  const joined = document.getElementById('profileJoined');
+  const status = document.getElementById('profileStatus');
+  const games = document.getElementById('profileGames');
+  const gameCount = document.getElementById('profileGameCount');
+
+  if (!avatar || !username || !joined || !status || !games || !gameCount) {
+    return;
+  }
+
+  avatar.replaceChildren();
+  username.textContent = '';
+  joined.textContent = '';
+  games.replaceChildren();
+  gameCount.textContent = '';
+  status.textContent = 'Loading profile...';
+
+  if (!profileId || !supabaseClient) {
+    status.textContent = 'This profile could not be loaded.';
+    return;
+  }
+
+  try {
+    const { data: profile, error } = await supabaseClient
+      .from('profiles')
+      .select('id, username, avatar_url, created_at')
+      .eq('id', profileId)
+      .maybeSingle();
+
+    if (error || !profile) {
+      status.textContent = error?.message || 'This profile could not be found.';
+      return;
+    }
+
+    username.textContent = profile.username || 'User';
+    avatar.textContent = (profile.username || 'U').slice(0, 1).toUpperCase();
+    if (profile.avatar_url) {
+      const image = document.createElement('img');
+      image.src = profile.avatar_url;
+      image.alt = '';
+      avatar.replaceChildren(image);
+    }
+    const joinedDate = profile.created_at ? new Date(profile.created_at) : null;
+    joined.textContent = joinedDate && !Number.isNaN(joinedDate.getTime())
+      ? `Joined ${joinedDate.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: '2-digit',
+          year: '2-digit',
+          timeZone: 'UTC'
+        })}`
+      : '';
+    status.textContent = '';
+    document.title = `${profile.username || 'User'} - Cubit`;
+
+    const { data: profileGames, error: gamesError } = await supabaseClient
+      .from('games')
+      .select('id, title, thumbnail_url')
+      .eq('owner_id', profile.id)
+      .order('created_at', { ascending: false });
+
+    if (gamesError) {
+      status.textContent = 'Could not load this user’s games.';
+      return;
+    }
+
+    renderProfileGames(profileGames || []);
+  } catch (error) {
+    console.error('Could not load profile.', error);
+    status.textContent = 'Unable to load this profile right now.';
+  }
 }
 
 async function loadUsers() {
@@ -838,17 +983,20 @@ document.querySelectorAll('.nav-item').forEach((button) => {
       return;
     }
 
-    if (target === 'users') {
-      loadUsers();
-    }
-
-    if (target === 'games') {
-      setActiveNavPage('games');
-      return;
-    }
-
-    setActiveNavPage(target);
+    navigateHomeRoute(target);
   });
+});
+
+document.querySelector('.welcome-icon')?.addEventListener('click', () => {
+  if (currentUser?.id) {
+    navigateHomeRoute(`profile/${encodeURIComponent(currentUser.id)}`);
+  }
+});
+
+window.addEventListener('hashchange', () => {
+  if (document.body.classList.contains('home-page')) {
+    handleHomeRoute();
+  }
 });
 
 document.querySelector('.menu-toggle')?.addEventListener('click', () => {
@@ -883,9 +1031,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.replace('games.html');
         return;
       }
-      if (['home', 'users'].includes(requestedPage)) {
-        setActiveNavPage(requestedPage);
-      }
+      handleHomeRoute();
       await loadHomeGames();
       await loadUsers();
     }

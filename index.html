@@ -100,6 +100,27 @@
                     <div id="usersList" class="users-list"></div>
                 </div>
 
+                <div id="profileView" class="content-view" hidden>
+                    <a class="profile-back" href="#users">Back to users</a>
+                    <section class="profile-page" aria-labelledby="profileUsername">
+                        <header class="profile-header">
+                            <div id="profileAvatar" class="profile-avatar" aria-hidden="true"></div>
+                            <div>
+                                <h1 id="profileUsername"></h1>
+                                <p id="profileJoined"></p>
+                            </div>
+                        </header>
+                        <p id="profileStatus" class="status-message" aria-live="polite"></p>
+                        <section class="profile-games" aria-labelledby="profileGamesHeading">
+                            <div class="profile-games-heading">
+                                <h2 id="profileGamesHeading">Games</h2>
+                                <span id="profileGameCount"></span>
+                            </div>
+                            <ul id="profileGames" class="game-list"></ul>
+                        </section>
+                    </section>
+                </div>
+
             </main>
         </div>
     </div>
