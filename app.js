@@ -228,6 +228,176 @@ function createGameThumbnail(game, className) {
   return link;
 }
 
+const AVATAR_COLORS_KEY = 'cubit-avatar-colors';
+const AVATAR_PROFILE_IMAGE_KEY = 'cubit-avatar-profile-image';
+
+normalizeStoredAvatarColors();
+
+function getDefaultAvatarColors() {
+  return {
+    head: '#f3f1ef',
+    torso: '#d7ddee',
+    leftArm: '#eef2ff',
+    rightArm: '#eef2ff',
+    leftLeg: '#c7d1ef',
+    rightLeg: '#c7d1ef'
+  };
+}
+
+function normalizeHexColor(value, fallback) {
+  const valid = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(value || '')) ? String(value) : fallback;
+  if (valid.length === 4) {
+    return `#${valid.slice(1).split('').map((char) => char + char).join('')}`;
+  }
+
+  return valid;
+}
+
+function normalizeStoredAvatarColors() {
+  try {
+    const raw = window.localStorage.getItem(AVATAR_COLORS_KEY);
+    if (!raw) {
+      return getDefaultAvatarColors();
+    }
+
+    const parsed = JSON.parse(raw);
+    const defaults = getDefaultAvatarColors();
+    const normalized = {
+      ...defaults,
+      ...Object.fromEntries(
+        Object.entries(parsed || {}).map(([key, value]) => {
+          const nextValue = normalizeHexColor(value, defaults[key] || '#ffffff');
+          return [key, nextValue === '#000000' ? (defaults[key] || '#ffffff') : nextValue];
+        })
+      )
+    };
+
+    window.localStorage.setItem(AVATAR_COLORS_KEY, JSON.stringify(normalized));
+    return normalized;
+  } catch {
+    return getDefaultAvatarColors();
+  }
+}
+
+function getStoredAvatarColors() {
+  try {
+    const raw = window.localStorage.getItem(AVATAR_COLORS_KEY);
+    if (!raw) {
+      return getDefaultAvatarColors();
+    }
+
+    const parsed = JSON.parse(raw);
+    const defaults = getDefaultAvatarColors();
+
+    return {
+      ...defaults,
+      ...Object.fromEntries(
+        Object.entries(parsed || {}).map(([key, value]) => {
+          const normalized = normalizeHexColor(value, defaults[key] || '#ffffff');
+          return [key, normalized === '#000000' ? (defaults[key] || '#ffffff') : normalized];
+        })
+      )
+    };
+  } catch {
+    return getDefaultAvatarColors();
+  }
+}
+
+function buildAvatarProfileSvg(colors) {
+  const palette = {
+    head: normalizeHexColor(colors.head, '#f3f1ef'),
+    torso: normalizeHexColor(colors.torso, '#d7ddee'),
+    leftArm: normalizeHexColor(colors.leftArm, '#eef2ff'),
+    rightArm: normalizeHexColor(colors.rightArm, '#eef2ff'),
+    leftLeg: normalizeHexColor(colors.leftLeg, '#c7d1ef'),
+    rightLeg: normalizeHexColor(colors.rightLeg, '#c7d1ef')
+  };
+
+  const svg = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Player headshot avatar">
+      <rect width="128" height="128" rx="24" fill="#16181d"/>
+      <ellipse cx="64" cy="100" rx="34" ry="18" fill="${palette.torso}"/>
+      <circle cx="64" cy="48" r="28" fill="${palette.head}"/>
+      <path d="M42 56 Q64 74 86 56 L86 76 Q64 92 42 76 Z" fill="${palette.torso}" opacity="0.95"/>
+      <circle cx="55" cy="47" r="2.5" fill="#000000" fill-opacity="0.32"/>
+      <circle cx="73" cy="47" r="2.5" fill="#000000" fill-opacity="0.32"/>
+      <path d="M55 62 Q64 68 73 62" stroke="#000000" stroke-opacity="0.35" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <rect x="48" y="72" width="32" height="8" rx="4" fill="#000000" fill-opacity="0.10"/>
+    </svg>
+  `;
+
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function saveAvatarProfileImage(colors) {
+  const profileImage = buildAvatarProfileSvg(colors);
+  try {
+    window.localStorage.setItem(AVATAR_COLORS_KEY, JSON.stringify(colors));
+    window.localStorage.setItem(AVATAR_PROFILE_IMAGE_KEY, profileImage);
+  } catch {
+    // Ignore storage failures so the page remains usable offline.
+  }
+  return profileImage;
+}
+
+function getSavedAvatarProfileImage() {
+  try {
+    const saved = window.localStorage.getItem(AVATAR_PROFILE_IMAGE_KEY);
+    if (saved && /^data:image\/png/i.test(saved)) {
+      return saved;
+    }
+
+    if (saved && /^data:image\/svg\+xml/i.test(saved)) {
+      window.localStorage.removeItem(AVATAR_PROFILE_IMAGE_KEY);
+    }
+  } catch {
+    // Ignore storage access failures.
+  }
+
+  return '';
+}
+
+function renderProfileAvatarImage(container, fallbackText, imageUrl) {
+  if (!container) {
+    return;
+  }
+
+  container.replaceChildren();
+
+  if (imageUrl) {
+    const image = document.createElement('img');
+    image.src = imageUrl;
+    image.alt = 'Player profile avatar';
+    container.appendChild(image);
+    return;
+  }
+
+  if (fallbackText) {
+    container.textContent = fallbackText;
+  }
+}
+
+function resolveUserAvatarUrl(user) {
+  try {
+    const storedProfileImage = window.localStorage.getItem(AVATAR_PROFILE_IMAGE_KEY);
+    if (storedProfileImage && /^data:image\/png/i.test(storedProfileImage)) {
+      return storedProfileImage;
+    }
+
+    if (storedProfileImage && /^data:image\/svg\+xml/i.test(storedProfileImage)) {
+      window.localStorage.removeItem(AVATAR_PROFILE_IMAGE_KEY);
+    }
+  } catch {
+    // Ignore storage access failures and fall through.
+  }
+
+  if (user?.avatar_url && /^data:image\/png/i.test(user.avatar_url)) {
+    return user.avatar_url;
+  }
+
+  return '';
+}
+
 function renderUsersList(users) {
   const container = document.getElementById('usersList');
   if (!container) {
@@ -248,6 +418,16 @@ function renderUsersList(users) {
 
     const avatar = document.createElement('span');
     avatar.className = 'mini-avatar';
+    const userAvatarUrl = resolveUserAvatarUrl(user);
+
+    if (userAvatarUrl) {
+      avatar.style.backgroundImage = `url(${userAvatarUrl})`;
+      avatar.style.backgroundSize = 'cover';
+      avatar.style.backgroundPosition = 'center';
+      avatar.style.backgroundRepeat = 'no-repeat';
+      avatar.style.border = '1px solid rgba(255,255,255,0.24)';
+      avatar.style.borderRadius = '6px';
+    }
 
     const name = document.createElement('span');
     name.textContent = user.username || user.email || 'User';
@@ -332,13 +512,9 @@ async function loadUserProfile(profileId) {
     }
 
     username.textContent = profile.username || 'User';
-    avatar.textContent = (profile.username || 'U').slice(0, 1).toUpperCase();
-    if (profile.avatar_url) {
-      const image = document.createElement('img');
-      image.src = profile.avatar_url;
-      image.alt = '';
-      avatar.replaceChildren(image);
-    }
+    const avatarImageUrl = resolveUserAvatarUrl(profile);
+    renderProfileAvatarImage(avatar, (profile.username || 'U').slice(0, 1).toUpperCase(), avatarImageUrl || '');
+
     const joinedDate = profile.created_at ? new Date(profile.created_at) : null;
     joined.textContent = joinedDate && !Number.isNaN(joinedDate.getTime())
       ? `Joined ${joinedDate.toLocaleDateString('en-GB', {
