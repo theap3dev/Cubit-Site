@@ -7,8 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=avatar-profile-fix-20261106">
-    <script type="module" src="https://cdn.jsdelivr.net/npm/@google/model-viewer@4.0.0/dist/model-viewer.min.js"></script>
+    <link rel="stylesheet" href="styles.css?v=avatar-faces-20261107">
+    <script type="importmap">
+        {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
+    </script>
 </head>
 <body class="home-page">
     <header class="topbar">
@@ -28,21 +30,38 @@
                 <a class="nav-item" href="index.html#home">Home</a>
                 <a class="nav-item" href="index.html#users">Users</a>
                 <a class="nav-item" href="games.html">Games</a>
+                <a class="nav-item" href="catalog.html">Catalog</a>
                 <a class="nav-item active" href="avatar.html" aria-current="page">Avatar</a>
-                <a id="createGameLink" class="nav-item" href="create.html" hidden>Create game</a>
+                <a id="createGameLink" class="nav-item" href="create.html" hidden>Create</a>
             </nav>
         </aside>
 
         <main class="content avatar-content" aria-label="Player avatar">
             <div class="avatar-workspace">
                 <div class="avatar-model-frame">
-                    <model-viewer id="avatarModel" src="cublet-textured.glb" alt="Player avatar" loading="eager" camera-controls auto-rotate rotation-per-second="18deg" shadow-intensity="1" exposure="1" camera-orbit="0deg 75deg 105%"></model-viewer>
+                    <canvas id="avatarCanvas" aria-label="Player avatar. Use mouse, touch or arrow keys to rotate."></canvas>
                 </div>
                 <section class="mesh-color-panel" aria-labelledby="meshColorsHeading">
-                    <h2 id="meshColorsHeading">Mesh colors</h2>
-                    <p id="meshColorStatus" role="status" aria-live="polite">Waiting for model materials...</p>
-                    <div id="meshColorList" class="mesh-color-list"></div>
-                    <button id="saveAvatarColorsBtn" class="save-avatar-btn" type="button">Save</button>
+                    <h2 id="meshColorsHeading">Customize avatar</h2>
+                    <div class="avatar-editor-tabs" role="tablist" aria-label="Avatar settings">
+                        <button class="avatar-editor-tab active" id="avatarColorsTab" type="button" role="tab" aria-selected="true" aria-controls="avatarColorsPanel" data-avatar-panel="avatarColorsPanel">Colors</button>
+                        <button class="avatar-editor-tab" id="avatarHatsTab" type="button" role="tab" aria-selected="false" aria-controls="avatarHatsPanel" data-avatar-panel="avatarHatsPanel">Hats</button>
+                        <button class="avatar-editor-tab" id="avatarFacesTab" type="button" role="tab" aria-selected="false" aria-controls="avatarFacesPanel" data-avatar-panel="avatarFacesPanel">Faces</button>
+                    </div>
+                    <div id="avatarColorsPanel" role="tabpanel" aria-labelledby="avatarColorsTab">
+                        <p id="meshColorStatus" role="status" aria-live="polite">Loading body colors...</p>
+                        <div id="meshColorList" class="mesh-color-list"></div>
+                    </div>
+                    <div id="avatarHatsPanel" role="tabpanel" aria-labelledby="avatarHatsTab" hidden>
+                        <p id="ownedHatStatus" role="status" aria-live="polite">Loading your hats...</p>
+                        <div id="ownedHatGrid" class="hat-grid" aria-label="Your hats"></div>
+                    </div>
+                    <div id="avatarFacesPanel" role="tabpanel" aria-labelledby="avatarFacesTab" hidden>
+                        <p id="ownedFaceStatus" role="status" aria-live="polite">Loading your faces...</p>
+                        <div id="ownedFaceGrid" class="face-grid" aria-label="Your faces"></div>
+                    </div>
+                    <button id="saveAvatarBtn" class="save-avatar-btn" type="button">Save</button>
+                    <p id="avatarSaveStatus" role="status" aria-live="polite"></p>
                 </section>
             </div>
         </main>
@@ -50,333 +69,7 @@
 
     <p id="statusMessage" hidden></p>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=avatar-model-only-20261106-fix-head-overlay" defer></script>
-    <script>
-        const avatarModel = document.getElementById('avatarModel');
-        const meshColorList = document.getElementById('meshColorList');
-        const meshColorStatus = document.getElementById('meshColorStatus');
-        const saveAvatarColorsBtn = document.getElementById('saveAvatarColorsBtn');
-
-        function linearToSrgb(channel) {
-            return channel <= 0.0031308 ? channel * 12.92 : 1.055 * channel ** (1 / 2.4) - 0.055;
-        }
-
-        function srgbToLinear(channel) {
-            return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
-        }
-
-        function factorToHex(factor) {
-            return `#${factor.slice(0, 3).map((channel) => Math.round(linearToSrgb(channel) * 255).toString(16).padStart(2, '0')).join('')}`;
-        }
-
-        function normalizeHex(value, fallback) {
-            const next = String(value || fallback);
-            if (!/^#[0-9a-f]{6}$/i.test(next)) {
-                return fallback;
-            }
-            return next.toLowerCase();
-        }
-
-        function normalizeMaterialName(value) {
-            return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-        }
-
-        function matchMaterialToSavedKey(materialName, savedKey) {
-            const normalizedMaterial = normalizeMaterialName(materialName);
-            const normalizedKey = normalizeMaterialName(savedKey);
-            return normalizedMaterial.includes(normalizedKey) || normalizedKey.includes(normalizedMaterial);
-        }
-
-        function getSavedColorKeyForMaterial(materialName, saved) {
-            const bodyPartKey = detectBodyColorKey(materialName);
-            if (bodyPartKey && saved[bodyPartKey]) {
-                return bodyPartKey;
-            }
-            return Object.keys(saved).find((candidate) => matchMaterialToSavedKey(materialName, candidate));
-        }
-
-        function detectBodyColorKey(materialName) {
-            const normalized = normalizeMaterialName(materialName);
-            const bodyPartKeys = {
-                head: ['head', 'face', 'smily', 'smile', 'overlay'],
-                torso: ['torso', 'body', 'chest'],
-                leftArm: ['leftarm', 'armleft', 'larm'],
-                rightArm: ['rightarm', 'armright', 'rarm'],
-                leftLeg: ['leftleg', 'legleft', 'lleg'],
-                rightLeg: ['rightleg', 'legright', 'rleg']
-            };
-
-            const match = Object.entries(bodyPartKeys).find(([, aliases]) => aliases.some((alias) => normalized.includes(alias)));
-            return match ? match[0] : null;
-        }
-
-        function normalizeStoredAvatarColors() {
-            try {
-                const raw = window.localStorage.getItem('cubit-avatar-colors');
-                if (!raw) {
-                    return null;
-                }
-
-                const parsed = JSON.parse(raw);
-                if (!parsed || typeof parsed !== 'object') {
-                    return null;
-                }
-
-                const normalized = Object.fromEntries(
-                    Object.entries(parsed).map(([key, value]) => {
-                        const nextValue = typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value)
-                            ? value.toLowerCase()
-                            : value;
-                        const finalValue = nextValue === '#000000' ? (DEFAULT_AVATAR_COLORS[key] || '#ffffff') : nextValue;
-                        return [key, finalValue];
-                    })
-                );
-
-                window.localStorage.setItem('cubit-avatar-colors', JSON.stringify(normalized));
-                return normalized;
-            } catch {
-                return null;
-            }
-        }
-
-        function getSavedAvatarColors() {
-            try {
-                const raw = window.localStorage.getItem('cubit-avatar-colors');
-                if (!raw) {
-                    return null;
-                }
-
-                const parsed = JSON.parse(raw);
-                if (!parsed || typeof parsed !== 'object') {
-                    return null;
-                }
-
-                return Object.fromEntries(
-                    Object.entries(parsed).map(([key, value]) => {
-                        const normalized = typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) && value.toLowerCase() === '#000000'
-                            ? (DEFAULT_AVATAR_COLORS[key] || '#ffffff')
-                            : value;
-                        return [key, normalized];
-                    })
-                );
-            } catch {
-                return null;
-            }
-        }
-
-        function applySavedMaterialColors() {
-            const saved = getSavedAvatarColors();
-            if (!saved || !avatarModel.model?.materials) {
-                return;
-            }
-
-            avatarModel.model.materials.forEach((material) => {
-                const pbr = material.pbrMetallicRoughness;
-                if (!pbr) {
-                    return;
-                }
-
-                const materialName = (material.name || '').toLowerCase();
-                const key = getSavedColorKeyForMaterial(material.name || '', saved);
-                if (!key || !saved[key]) {
-                    return;
-                }
-
-                const hex = normalizeHex(saved[key], '#ffffff');
-                const rgb = hex.match(/[0-9a-f]{2}/gi).map((channel) => srgbToLinear(Number.parseInt(channel, 16) / 255));
-                pbr.setBaseColorFactor([...rgb, pbr.baseColorFactor?.[3] ?? 1]);
-
-                const picker = meshColorList.querySelector(`input[aria-label="Color for ${material.name || 'Material'}"]`);
-                if (picker) {
-                    picker.value = hex;
-                }
-            });
-        }
-
-        function updateSaveButtonState() {
-            if (!saveAvatarColorsBtn) {
-                return;
-            }
-
-            saveAvatarColorsBtn.textContent = 'Saved';
-            saveAvatarColorsBtn.disabled = true;
-            saveAvatarColorsBtn.classList.add('saved');
-            window.clearTimeout(updateSaveButtonState.timeoutId);
-            updateSaveButtonState.timeoutId = window.setTimeout(() => {
-                saveAvatarColorsBtn.textContent = 'Save';
-                saveAvatarColorsBtn.disabled = false;
-                saveAvatarColorsBtn.classList.remove('saved');
-            }, 1200);
-        }
-
-        const DEFAULT_AVATAR_COLORS = {
-            head: '#f3f1ef',
-            torso: '#d7ddee',
-            leftArm: '#eef2ff',
-            rightArm: '#eef2ff',
-            leftLeg: '#c7d1ef',
-            rightLeg: '#c7d1ef'
-        };
-
-        function getDefaultAvatarColorForKey(key) {
-            return DEFAULT_AVATAR_COLORS[key] || '#ffffff';
-        }
-
-        function gatherBodyColorMap() {
-            const colors = {};
-            const materials = avatarModel.model?.materials || [];
-
-            materials.forEach((material) => {
-                const pbr = material.pbrMetallicRoughness;
-                if (!pbr) {
-                    return;
-                }
-
-                const materialName = (material.name || '').toLowerCase();
-                if (/smily|smile|face|overlay/i.test(materialName)) {
-                    return;
-                }
-                const factor = pbr.baseColorFactor || [1, 1, 1, 1];
-                const key = detectBodyColorKey(materialName);
-                if (!key) {
-                    return;
-                }
-
-                const factorChannels = [...factor.slice(0, 3)];
-                const hasCustomColor = material.__avatarCustomColor === true;
-                const isDefaultFactor = factorChannels.every((channel) => channel <= 0.04);
-                const hex = hasCustomColor || !isDefaultFactor ? factorToHex(factorChannels) : getDefaultAvatarColorForKey(key);
-                colors[key] = hex;
-            });
-
-            return colors;
-        }
-
-        function saveCurrentAvatarColors() {
-            const colors = gatherBodyColorMap();
-            const rgb = Object.keys(colors).length ? colors : {
-                head: '#f3f1ef',
-                torso: '#d7ddee',
-                leftArm: '#eef2ff',
-                rightArm: '#eef2ff',
-                leftLeg: '#c7d1ef',
-                rightLeg: '#c7d1ef'
-            };
-
-            try {
-                window.localStorage.setItem('cubit-avatar-colors', JSON.stringify(rgb));
-                window.localStorage.removeItem('cubit-avatar-profile-image');
-
-                const originalOrbit = avatarModel.cameraOrbit;
-                const originalTarget = avatarModel.cameraTarget;
-                const originalAutoRotate = avatarModel.autoRotate;
-                const originalExposure = avatarModel.exposure;
-                const originalShadowIntensity = avatarModel.shadowIntensity;
-
-                avatarModel.cameraOrbit = '0deg 90deg 1.4m';
-                avatarModel.cameraTarget = '0m 0.8m 0m';
-                avatarModel.autoRotate = false;
-                avatarModel.exposure = '1';
-                avatarModel.shadowIntensity = '0';
-
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        const canvas = avatarModel.shadowRoot?.querySelector('canvas') || avatarModel.querySelector('canvas');
-                        if (canvas) {
-                            const dataUrl = canvas.toDataURL('image/png');
-                            window.localStorage.setItem('cubit-avatar-profile-image', dataUrl);
-                        }
-
-                        avatarModel.cameraOrbit = originalOrbit;
-                        avatarModel.cameraTarget = originalTarget;
-                        avatarModel.autoRotate = originalAutoRotate;
-                        avatarModel.exposure = originalExposure;
-                        avatarModel.shadowIntensity = originalShadowIntensity;
-                    });
-                });
-            } catch {
-                // Ignore storage issues.
-            }
-
-            updateSaveButtonState();
-        }
-
-        function populateMeshColors() {
-            const materials = avatarModel.model?.materials || [];
-            meshColorList.replaceChildren();
-
-            if (!materials.length) {
-                meshColorStatus.hidden = false;
-                meshColorStatus.textContent = 'No editable materials found.';
-                return;
-            }
-
-            meshColorStatus.hidden = true;
-
-            materials.forEach((material, index) => {
-                const pbr = material.pbrMetallicRoughness;
-                if (!pbr) {
-                    return;
-                }
-
-                const materialName = material.name || `Material ${index + 1}`;
-                if (/smily|smile|face|overlay/i.test(materialName)) {
-                    return;
-                }
-                const materialKey = detectBodyColorKey(materialName);
-                const originalFactor = [...pbr.baseColorFactor];
-                const label = document.createElement('label');
-                const name = document.createElement('span');
-                const picker = document.createElement('input');
-                const saved = getSavedAvatarColors();
-                const savedKey = getSavedColorKeyForMaterial(materialName, saved || {});
-                const savedHex = savedKey ? saved[savedKey] : null;
-                const defaultHex = materialKey ? getDefaultAvatarColorForKey(materialKey) : factorToHex(originalFactor);
-                const initialHex = normalizeHex(savedHex, originalFactor.every((channel) => channel <= 0.04) ? defaultHex : factorToHex(originalFactor));
-
-                label.className = 'mesh-color-control';
-                name.textContent = materialName;
-                picker.type = 'color';
-                picker.value = initialHex;
-                picker.setAttribute('aria-label', `Color for ${materialName}`);
-                picker.addEventListener('input', () => {
-                    material.__avatarCustomColor = true;
-                    const selectedChannels = picker.value.match(/[0-9a-f]{2}/gi).map((channel) => srgbToLinear(Number.parseInt(channel, 16) / 255));
-                    pbr.setBaseColorFactor([...selectedChannels, originalFactor[3] ?? 1]);
-                });
-
-                label.append(name, picker);
-                meshColorList.append(label);
-            });
-
-            applySavedMaterialColors();
-        }
-
-        normalizeStoredAvatarColors();
-
-        saveAvatarColorsBtn?.addEventListener('click', saveCurrentAvatarColors);
-
-        let avatarEditorInitialized = false;
-        function initializeAvatarEditor() {
-            if (avatarEditorInitialized || !avatarModel.model?.materials?.length) {
-                return;
-            }
-
-            avatarEditorInitialized = true;
-            window.clearInterval(avatarModelInitializationTimer);
-            populateMeshColors();
-            applySavedMaterialColors();
-        }
-
-        const avatarModelInitializationTimer = window.setInterval(initializeAvatarEditor, 100);
-        avatarModel.addEventListener('load', initializeAvatarEditor);
-        initializeAvatarEditor();
-
-        avatarModel.addEventListener('error', () => {
-            window.clearInterval(avatarModelInitializationTimer);
-            meshColorStatus.hidden = false;
-            meshColorStatus.textContent = 'Load the player model to edit its mesh colors.';
-        });
-    </script>
+    <script src="app.js?v=avatar-faces-20261107" defer></script>
+    <script type="module" src="avatar-editor.js?v=avatar-faces-20261107"></script>
 </body>
 </html>

@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create a game - Cubit</title>
+    <title>Create - Cubit</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=create-hub-20261106">
 </head>
 <body class="home-page">
     <header class="topbar">
@@ -28,43 +28,121 @@
                 <a class="nav-item" href="index.html#home">Home</a>
                 <a class="nav-item" href="index.html#users">Users</a>
                 <a class="nav-item" href="games.html">Games</a>
+                <a class="nav-item" href="catalog.html">Catalog</a>
                                 <a class="nav-item" href="avatar.html">Avatar</a>
-                <a id="createGameLink" class="nav-item active" href="create.html" aria-current="page" hidden>Create game</a>
+                <a id="createGameLink" class="nav-item active" href="create.html" aria-current="page" hidden>Create</a>
             </nav>
         </aside>
 
-        <main class="content create-page-content" aria-label="Create a game">
+        <main class="content create-page-content" aria-label="Create and manage content">
             <section id="loginRequired" class="create-login-required">
                 <h1 class="section-title">Sign in required</h1>
-                <p>Sign in to create a game.</p>
+                <p>Sign in to create and manage your content.</p>
                 <a class="create-signin-link" href="index.html">Go to sign in</a>
             </section>
 
             <section id="gameWorkspace" class="create-workspace" hidden>
-                <header class="section-header">
-                    <h1>Create a game</h1>
+                <header class="section-header create-heading">
+                    <div>
+                        <p class="create-kicker">Creator workspace</p>
+                        <h1>Create</h1>
+                    </div>
+                    <span class="create-account-name" id="creatorAccountName"></span>
                 </header>
                 <p id="statusMessage" class="status-message" aria-live="polite"></p>
 
-                <form id="gameCreateForm" class="game-form" novalidate>
-                    <label for="gameTitle">Game name</label>
-                    <input id="gameTitle" name="title" type="text" maxlength="80" required>
-                    <label for="gameThumbnail">Thumbnail (image, max 5 MB, optional)</label>
-                    <input id="gameThumbnail" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
-                    <label for="worldFile">World file (.json, max 1 MB)</label>
-                    <input id="worldFile" name="world" type="file" accept=".json,application/json" required>
-                    <label for="gameVisibility">Visibility</label>
-                    <select id="gameVisibility" name="visibility">
-                        <option value="private">Private</option>
-                        <option value="public">Public</option>
-                    </select>
-                    <button class="submit-btn" type="submit">Create game</button>
-                </form>
+                <div class="creator-tabs" role="tablist" aria-label="Creator tools">
+                    <button class="creator-tab active" id="createGameTab" type="button" role="tab" aria-selected="true" aria-controls="createGamePanel" data-creator-tab="createGamePanel">Create game</button>
+                    <button class="creator-tab" id="manageGamesTab" type="button" role="tab" aria-selected="false" aria-controls="manageGamesPanel" data-creator-tab="manageGamesPanel">Edit games</button>
+                    <button class="creator-tab" id="uploadHatsTab" type="button" role="tab" aria-selected="false" aria-controls="uploadHatsPanel" data-creator-tab="uploadHatsPanel">Upload hats</button>
+                </div>
+
+                <section id="createGamePanel" class="creator-panel active" role="tabpanel" aria-labelledby="createGameTab">
+                    <div class="creator-panel-heading">
+                        <div>
+                            <span class="creator-index">01 / NEW WORLD</span>
+                            <h2>Start a game</h2>
+                        </div>
+                    </div>
+                    <form id="gameCreateForm" class="game-form" novalidate>
+                        <label for="gameTitle">Game name</label>
+                        <input id="gameTitle" name="title" type="text" maxlength="80" required>
+                        <label for="gameThumbnail">Thumbnail (image, max 5 MB, optional)</label>
+                        <input id="gameThumbnail" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                        <label for="worldFile">World file (.json, max 1 MB)</label>
+                        <input id="worldFile" name="world" type="file" accept=".json,application/json" required>
+                        <label for="gameVisibility">Visibility</label>
+                        <select id="gameVisibility" name="visibility">
+                            <option value="private">Private</option>
+                            <option value="public">Public</option>
+                        </select>
+                        <button class="submit-btn" type="submit">Create game</button>
+                    </form>
+                </section>
+
+                <section id="manageGamesPanel" class="creator-panel" role="tabpanel" aria-labelledby="manageGamesTab" hidden>
+                    <div class="creator-panel-heading">
+                        <div>
+                            <span class="creator-index">02 / YOUR WORLDS</span>
+                            <h2>Edit games</h2>
+                        </div>
+                        <button id="refreshOwnedGames" class="creator-text-button" type="button">Refresh</button>
+                    </div>
+                    <p id="ownedGamesStatus" class="creator-substatus" aria-live="polite">Loading your games...</p>
+                    <ul id="ownedGamesList" class="owned-games-list" aria-label="Your games"></ul>
+                    <form id="manageGameEditForm" class="game-form" hidden novalidate>
+                        <input id="manageEditGameId" type="hidden">
+                        <h3 id="manageEditHeading">Edit game</h3>
+                        <label for="manageEditGameTitle">Game name</label>
+                        <input id="manageEditGameTitle" name="title" type="text" maxlength="80" required>
+                        <label for="manageEditThumbnail">Replace thumbnail (image, max 5 MB, optional)</label>
+                        <input id="manageEditThumbnail" name="thumbnail" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif">
+                        <label for="manageEditWorldFile">Replace world file (.json, max 1 MB, optional)</label>
+                        <input id="manageEditWorldFile" name="world" type="file" accept=".json,application/json">
+                        <label for="manageEditVisibility">Visibility</label>
+                        <select id="manageEditVisibility" name="visibility">
+                            <option value="private">Private</option>
+                            <option value="public">Public</option>
+                        </select>
+                        <div class="game-edit-actions">
+                            <button class="submit-btn" type="submit">Save changes</button>
+                            <button id="cancelManageGameEdit" class="cancel-edit-btn" type="button">Cancel</button>
+                        </div>
+                    </form>
+                </section>
+
+                <section id="uploadHatsPanel" class="creator-panel" role="tabpanel" aria-labelledby="uploadHatsTab" hidden>
+                    <div class="creator-panel-heading">
+                        <div>
+                            <span class="creator-index">03 / ACCESSORIES</span>
+                            <h2>Upload hats</h2>
+                        </div>
+                        <span id="hatUploadAccess" class="access-state">Checking access</span>
+                    </div>
+                    <p id="hatUploadDescription" class="creator-substatus">Hat uploads are available to accounts enabled by an administrator.</p>
+                    <form id="hatUploadForm" class="game-form" hidden novalidate>
+                        <label for="hatName">Hat name</label>
+                        <input id="hatName" name="name" type="text" maxlength="80" required>
+                        <label for="hatModelFile">3D model (.glb, max 10 MB)</label>
+                        <input id="hatModelFile" name="model" type="file" accept=".glb,model/gltf-binary" required>
+                        <button class="submit-btn" type="submit">Upload hat</button>
+                    </form>
+                    <form id="faceUploadForm" class="game-form" hidden novalidate>
+                        <h3>Upload a face</h3>
+                        <label for="faceName">Face name</label>
+                        <input id="faceName" name="name" type="text" maxlength="80" required>
+                        <label for="faceImageFile">Transparent PNG image (max 2 MB)</label>
+                        <input id="faceImageFile" name="image" type="file" accept="image/png,.png" required>
+                        <button class="submit-btn" type="submit">Upload face</button>
+                    </form>
+                    <ul id="uploadedHatsList" class="owned-games-list" aria-label="Uploaded hats"></ul>
+                    <ul id="uploadedFacesList" class="owned-games-list" aria-label="Uploaded faces"></ul>
+                </section>
             </section>
         </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js" defer></script>
+    <script src="app.js?v=faces-catalog-20261107" defer></script>
 </body>
 </html>

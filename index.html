@@ -7,7 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=avatar-profile-fix-20261106">
+    <script type="importmap">
+        {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
+    </script>
+    <link rel="stylesheet" href="styles.css?v=profile-3d-20261107">
 </head>
 <body class="auth-page">
     <div id="authShell" class="auth-shell">
@@ -71,8 +74,9 @@
                     <button class="nav-item active" type="button" data-page="home">Home</button>
                     <button class="nav-item" type="button" data-page="users">Users</button>
                     <a class="nav-item" href="games.html">Games</a>
+                    <a class="nav-item" href="catalog.html">Catalog</a>
                                         <a class="nav-item" href="avatar.html">Avatar</a>
-                    <a id="createGameLink" class="nav-item" href="create.html" hidden>Create game</a>
+                    <a id="createGameLink" class="nav-item" href="create.html" hidden>Create</a>
                 </nav>
             </aside>
 
@@ -111,6 +115,13 @@
                                 <p id="profileJoined"></p>
                             </div>
                         </header>
+                        <section class="profile-avatar-showcase" aria-labelledby="profileAvatarHeading">
+                            <h2 id="profileAvatarHeading">Avatar</h2>
+                            <div class="profile-avatar-scene">
+                                <canvas id="profileAvatar3D" aria-label="Saved 3D avatar"></canvas>
+                                <p id="profileAvatar3DStatus" role="status" aria-live="polite">Loading avatar...</p>
+                            </div>
+                        </section>
                         <p id="profileStatus" class="status-message" aria-live="polite"></p>
                         <section class="profile-games" aria-labelledby="profileGamesHeading">
                             <div class="profile-games-heading">
@@ -127,6 +138,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=avatar-model-only-20261106" defer></script>
+    <script src="app.js?v=profile-avatar-20261107-final" defer></script>
+    <script type="module" src="profile-avatar.js?v=profile-avatar-20261107-final"></script>
 </body>
 </html>

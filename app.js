@@ -44,8 +44,23 @@ const cancelEditButton = document.getElementById('cancelEditButton');
 const gameTitleDisplay = document.getElementById('gameTitleDisplay');
 const gameVisibilityDisplay = document.getElementById('gameVisibilityDisplay');
 const gameOverview = document.getElementById('gameOverview');
+const creatorAccountName = document.getElementById('creatorAccountName');
+const ownedGamesList = document.getElementById('ownedGamesList');
+const ownedGamesStatus = document.getElementById('ownedGamesStatus');
+const manageGameEditForm = document.getElementById('manageGameEditForm');
+const hatUploadForm = document.getElementById('hatUploadForm');
+const faceUploadForm = document.getElementById('faceUploadForm');
+const uploadedHatsList = document.getElementById('uploadedHatsList');
+const uploadedFacesList = document.getElementById('uploadedFacesList');
+const hatUploadAccess = document.getElementById('hatUploadAccess');
+const hatUploadDescription = document.getElementById('hatUploadDescription');
+const catalogList = document.getElementById('catalogList');
+const catalogCount = document.getElementById('catalogCount');
 let currentUser = null;
 let currentGame = null;
+let currentOwnedGames = [];
+window.cubitSupabaseClient = supabaseClient;
+window.cubitCurrentUser = null;
 
 function setStatus(message, type = 'info') {
   statusMessage.textContent = message || '';
@@ -75,6 +90,7 @@ function setActiveTab(tabName) {
 function updateAuthUI(session) {
   const user = session?.user;
   currentUser = user || null;
+  window.cubitCurrentUser = currentUser;
 
   if (userEmail) {
     userEmail.textContent = user?.email || '';
@@ -98,6 +114,10 @@ function updateAuthUI(session) {
 
   if (gameWorkspace) {
     gameWorkspace.hidden = !user;
+  }
+
+  if (creatorAccountName) {
+    creatorAccountName.textContent = user ? getDisplayName(session) : '';
   }
 
   if (loginRequired) {
@@ -266,8 +286,7 @@ function normalizeStoredAvatarColors() {
       ...defaults,
       ...Object.fromEntries(
         Object.entries(parsed || {}).map(([key, value]) => {
-          const nextValue = normalizeHexColor(value, defaults[key] || '#ffffff');
-          return [key, nextValue === '#000000' ? (defaults[key] || '#ffffff') : nextValue];
+          return [key, normalizeHexColor(value, defaults[key] || '#ffffff')];
         })
       )
     };
@@ -293,8 +312,7 @@ function getStoredAvatarColors() {
       ...defaults,
       ...Object.fromEntries(
         Object.entries(parsed || {}).map(([key, value]) => {
-          const normalized = normalizeHexColor(value, defaults[key] || '#ffffff');
-          return [key, normalized === '#000000' ? (defaults[key] || '#ffffff') : normalized];
+          return [key, normalizeHexColor(value, defaults[key] || '#ffffff')];
         })
       )
     };
@@ -511,9 +529,42 @@ async function loadUserProfile(profileId) {
       return;
     }
 
+    const { data: avatarState, error: avatarStateError } = await supabaseClient
+      .from('profiles')
+      .select('avatar_colors, worn_hat_id, worn_face_id')
+      .eq('id', profileId)
+      .maybeSingle();
+    const needsSchema = ['42703', 'PGRST204'].includes(avatarStateError?.code);
+    let avatarColors = avatarState?.avatar_colors || {};
+    const defaults = getDefaultAvatarColors();
+    const localColors = getStoredAvatarColors();
+    const serverHasDefaults = Object.entries(defaults).every(([key, fallback]) =>
+      normalizeHexColor(avatarColors[key], fallback) === fallback
+    );
+    const localHasCustomColors = Object.entries(defaults).some(([key, fallback]) => localColors[key] !== fallback);
+
+    if (currentUser?.id === profileId && localHasCustomColors && (needsSchema || serverHasDefaults)) {
+      avatarColors = localColors;
+      if (!needsSchema) {
+        const { error: syncError } = await supabaseClient
+          .from('profiles')
+          .update({ avatar_colors: avatarColors })
+          .eq('id', profileId);
+        if (syncError) console.error('Could not sync saved avatar colors to the profile.', syncError);
+      }
+    }
+
     username.textContent = profile.username || 'User';
     const avatarImageUrl = resolveUserAvatarUrl(profile);
     renderProfileAvatarImage(avatar, (profile.username || 'U').slice(0, 1).toUpperCase(), avatarImageUrl || '');
+    window.cubitProfileAvatarState = {
+      profileId: profile.id,
+      colors: avatarColors,
+      wornHatId: avatarState?.worn_hat_id || null,
+      wornFaceId: avatarState?.worn_face_id || null,
+      needsSchema
+    };
+    window.dispatchEvent(new CustomEvent('cubit-profile-avatar', { detail: window.cubitProfileAvatarState }));
 
     const joinedDate = profile.created_at ? new Date(profile.created_at) : null;
     joined.textContent = joinedDate && !Number.isNaN(joinedDate.getTime())
@@ -524,7 +575,9 @@ async function loadUserProfile(profileId) {
           timeZone: 'UTC'
         })}`
       : '';
-    status.textContent = '';
+    status.textContent = needsSchema
+      ? 'Run the latest schema.sql to share saved avatar colors and accessories on every profile.'
+      : avatarStateError ? 'Avatar settings could not be loaded.' : '';
     document.title = `${profile.username || 'User'} - Cubit`;
 
     const { data: profileGames, error: gamesError } = await supabaseClient
@@ -786,6 +839,441 @@ async function uploadGameThumbnail(file, gameId) {
   return data.publicUrl;
 }
 
+function renderOwnedGames(games) {
+  if (!ownedGamesList || !ownedGamesStatus) {
+    return;
+  }
+
+  currentOwnedGames = games || [];
+  ownedGamesList.replaceChildren();
+
+  if (!currentOwnedGames.length) {
+    ownedGamesStatus.textContent = 'You have not created any games yet.';
+    return;
+  }
+
+  ownedGamesStatus.textContent = `${currentOwnedGames.length} ${currentOwnedGames.length === 1 ? 'game' : 'games'}`;
+  currentOwnedGames.forEach((game) => {
+    const item = document.createElement('li');
+    item.className = 'owned-game-item';
+
+    const thumbnail = document.createElement('div');
+    thumbnail.className = 'owned-game-thumbnail';
+    if (game.thumbnail_url) {
+      const image = document.createElement('img');
+      image.src = game.thumbnail_url;
+      image.alt = '';
+      thumbnail.appendChild(image);
+    }
+
+    const details = document.createElement('div');
+    details.className = 'owned-game-details';
+    const title = document.createElement('h3');
+    title.textContent = game.title;
+    const visibility = document.createElement('p');
+    visibility.textContent = `${game.visibility} · Created ${new Date(game.created_at).toLocaleDateString()}`;
+    details.append(title, visibility);
+
+    const actions = document.createElement('div');
+    actions.className = 'owned-game-actions';
+    const openLink = document.createElement('a');
+    openLink.href = `game.html?id=${encodeURIComponent(game.id)}`;
+    openLink.textContent = 'Open';
+    openLink.className = 'creator-text-button';
+    const editButton = document.createElement('button');
+    editButton.type = 'button';
+    editButton.className = 'creator-text-button';
+    editButton.dataset.editOwnedGame = game.id;
+    editButton.textContent = 'Edit';
+    actions.append(openLink, editButton);
+
+    item.append(thumbnail, details, actions);
+    ownedGamesList.appendChild(item);
+  });
+}
+
+async function loadOwnedGames() {
+  if (!ownedGamesList || !supabaseClient || !currentUser) {
+    if (ownedGamesStatus) {
+      ownedGamesStatus.textContent = currentUser ? 'Game service is unavailable.' : 'Sign in to manage your games.';
+    }
+    return;
+  }
+
+  ownedGamesStatus.textContent = 'Loading your games...';
+  const { data, error } = await supabaseClient
+    .from('games')
+    .select('id, owner_id, title, visibility, thumbnail_url, created_at')
+    .eq('owner_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    ownedGamesStatus.textContent = error.code === '42P01' || error.code === 'PGRST205'
+      ? 'Run schema.sql in the Supabase SQL Editor to set up games.'
+      : error.message;
+    return;
+  }
+
+  renderOwnedGames(data || []);
+}
+
+async function loadHatUploads() {
+  if (!hatUploadAccess || !supabaseClient || !currentUser) {
+    if (hatUploadAccess) {
+      hatUploadAccess.textContent = 'Sign in required';
+      hatUploadDescription.textContent = 'Sign in to check whether hat uploads are enabled for your account.';
+    }
+    return;
+  }
+
+  hatUploadAccess.textContent = 'Checking access';
+  const { data: profile, error: profileError } = await supabaseClient
+    .from('profiles')
+    .select('hat_upload_enabled')
+    .eq('id', currentUser.id)
+    .maybeSingle();
+
+  if (profileError) {
+    hatUploadAccess.textContent = 'Unavailable';
+    hatUploadDescription.textContent = profileError.code === '42703' || profileError.code === 'PGRST204'
+      ? 'Run the latest schema.sql to enable hat-upload permissions.'
+      : profileError.message;
+    return;
+  }
+
+  if (!profile?.hat_upload_enabled) {
+    hatUploadAccess.textContent = 'Not enabled';
+    hatUploadDescription.textContent = 'Hat uploads are available to accounts enabled by an administrator.';
+    hatUploadForm.hidden = true;
+    faceUploadForm.hidden = true;
+    return;
+  }
+
+  hatUploadAccess.textContent = 'Upload enabled';
+  hatUploadDescription.textContent = 'Upload a GLB hat model for your account.';
+  hatUploadForm.hidden = false;
+  faceUploadForm.hidden = false;
+
+  const { data: hats, error: hatsError } = await supabaseClient
+    .from('hats')
+    .select('id, name, model_url, created_at')
+    .eq('uploader_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (hatsError) {
+    hatUploadDescription.textContent = hatsError.code === '42P01' || hatsError.code === 'PGRST205'
+      ? 'Run the latest schema.sql to set up hat uploads.'
+      : hatsError.message;
+    return;
+  }
+
+  uploadedHatsList.replaceChildren();
+  (hats || []).forEach((hat) => {
+    const item = document.createElement('li');
+    item.className = 'owned-game-item';
+    const details = document.createElement('div');
+    details.className = 'owned-game-details';
+    const title = document.createElement('h3');
+    title.textContent = hat.name;
+    const date = document.createElement('p');
+    date.textContent = `Uploaded ${new Date(hat.created_at).toLocaleDateString()}`;
+    details.append(title, date);
+    const link = document.createElement('a');
+    link.className = 'creator-text-button';
+    link.href = hat.model_url;
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    link.textContent = 'View model';
+    item.append(details, link);
+    uploadedHatsList.appendChild(item);
+  });
+
+  const { data: faces, error: facesError } = await supabaseClient
+    .from('faces')
+    .select('id, name, image_url, created_at')
+    .eq('uploader_id', currentUser.id)
+    .order('created_at', { ascending: false });
+
+  if (facesError) {
+    hatUploadDescription.textContent = facesError.code === '42P01' || facesError.code === 'PGRST205'
+      ? 'Run the latest schema.sql to enable face uploads.'
+      : facesError.message;
+    return;
+  }
+
+  uploadedFacesList.replaceChildren();
+  (faces || []).forEach((face) => {
+    const item = document.createElement('li');
+    item.className = 'owned-game-item';
+    const image = document.createElement('img');
+    image.className = 'face-upload-thumbnail';
+    image.src = face.image_url;
+    image.alt = '';
+    const details = document.createElement('div');
+    details.className = 'owned-game-details';
+    const title = document.createElement('h3');
+    title.textContent = face.name;
+    const date = document.createElement('p');
+    date.textContent = `Uploaded ${new Date(face.created_at).toLocaleDateString()}`;
+    details.append(title, date);
+    item.append(image, details);
+    uploadedFacesList.appendChild(item);
+  });
+}
+
+async function loadCatalog() {
+  if (!catalogList || !supabaseClient) {
+    return;
+  }
+
+  catalogList.replaceChildren();
+  catalogCount.textContent = 'Loading items';
+  setStatus('Loading catalog...', 'info');
+
+  const [
+    { data: hats, error: hatsError },
+    { data: faces, error: facesError }
+  ] = await Promise.all([
+    supabaseClient.from('hats').select('id, name, model_url, uploader_id, created_at').order('created_at', { ascending: false }),
+    supabaseClient.from('faces').select('id, name, image_url, uploader_id, created_at').order('created_at', { ascending: false })
+  ]);
+
+  if (hatsError || facesError) {
+    const error = hatsError || facesError;
+    catalogCount.textContent = 'Unavailable';
+    setStatus(error.code === '42P01' || error.code === 'PGRST205'
+      ? 'Run the latest schema.sql to create the catalog.'
+      : error.message, 'error');
+    return;
+  }
+
+  const ownedHatIds = new Set();
+  const ownedFaceIds = new Set();
+  if (currentUser) {
+    const [
+      { data: ownedHats, error: hatOwnershipError },
+      { data: ownedFaces, error: faceOwnershipError }
+    ] = await Promise.all([
+      supabaseClient.from('user_hats').select('hat_id').eq('user_id', currentUser.id),
+      supabaseClient.from('user_faces').select('face_id').eq('user_id', currentUser.id)
+    ]);
+
+    const ownershipError = hatOwnershipError || faceOwnershipError;
+    if (ownershipError) {
+      catalogCount.textContent = `${hats.length + faces.length} items`;
+      setStatus(ownershipError.code === '42P01' || ownershipError.code === 'PGRST205'
+        ? 'Run the latest schema.sql to enable collecting hats.'
+        : ownershipError.message, 'error');
+      return;
+    }
+    (ownedHats || []).forEach((item) => ownedHatIds.add(item.hat_id));
+    (ownedFaces || []).forEach((item) => ownedFaceIds.add(item.face_id));
+  }
+
+  const items = [
+    ...(hats || []).map((hat) => ({ ...hat, type: 'hat' })),
+    ...(faces || []).map((face) => ({ ...face, type: 'face' }))
+  ].sort((first, second) => new Date(second.created_at) - new Date(first.created_at));
+
+  catalogCount.textContent = `${items.length} ${items.length === 1 ? 'item' : 'items'}`;
+  if (!items.length) {
+    setStatus('No items have been uploaded yet.', 'info');
+    return;
+  }
+
+  setStatus('');
+  items.forEach((catalogItem) => {
+    const item = document.createElement('li');
+    item.className = 'catalog-item';
+
+    let preview;
+    if (catalogItem.type === 'hat') {
+      preview = document.createElement('model-viewer');
+      preview.className = 'catalog-item-preview';
+      preview.src = catalogItem.model_url;
+      preview.alt = `${catalogItem.name} 3D preview`;
+      preview.setAttribute('camera-controls', '');
+      preview.setAttribute('auto-rotate', '');
+      preview.setAttribute('rotation-per-second', '18deg');
+      preview.setAttribute('loading', 'lazy');
+      preview.setAttribute('shadow-intensity', '1');
+      preview.setAttribute('camera-orbit', '0deg 75deg 100%');
+    } else {
+      preview = document.createElement('img');
+      preview.className = 'catalog-item-face-preview';
+      preview.src = catalogItem.image_url;
+      preview.alt = `${catalogItem.name} face`;
+    }
+
+    const details = document.createElement('div');
+    details.className = 'catalog-item-details';
+    const name = document.createElement('h2');
+    name.textContent = catalogItem.name;
+    const uploaded = document.createElement('p');
+    uploaded.textContent = `${catalogItem.type === 'face' ? 'Face' : 'Hat'} · Added ${new Date(catalogItem.created_at).toLocaleDateString()}`;
+    details.append(name, uploaded);
+
+    const action = document.createElement('button');
+    action.type = 'button';
+    action.className = 'catalog-get-button';
+    action.dataset[catalogItem.type === 'face' ? 'getFace' : 'getHat'] = catalogItem.id;
+    const isOwned = catalogItem.type === 'face' ? ownedFaceIds.has(catalogItem.id) : ownedHatIds.has(catalogItem.id);
+    if (isOwned) {
+      action.textContent = 'Owned';
+      action.disabled = true;
+      action.classList.add('owned');
+    } else if (currentUser) {
+      action.textContent = catalogItem.type === 'face' ? 'Get face' : 'Get hat';
+    } else {
+      action.textContent = 'Sign in to get';
+      action.disabled = true;
+    }
+
+    item.classList.toggle('catalog-item-face', catalogItem.type === 'face');
+    item.append(preview, details, action);
+    catalogList.appendChild(item);
+  });
+}
+
+async function claimCatalogHat(button) {
+  if (!supabaseClient || !currentUser) {
+    setStatus('Sign in to get this hat.', 'error');
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Adding...';
+  const { error } = await supabaseClient.from('user_hats').insert({
+    user_id: currentUser.id,
+    hat_id: button.dataset.getHat
+  });
+
+  if (error && error.code !== '23505') {
+    button.disabled = false;
+    button.textContent = 'Get hat';
+    setStatus(error.code === '42P01' || error.code === 'PGRST205'
+      ? 'Run the latest schema.sql to enable collecting hats.'
+      : error.message, 'error');
+    return;
+  }
+
+  setStatus('Hat added to your collection.', 'success');
+  await loadCatalog();
+}
+
+async function claimCatalogFace(button) {
+  if (!supabaseClient || !currentUser) {
+    setStatus('Sign in to get this face.', 'error');
+    return;
+  }
+
+  button.disabled = true;
+  button.textContent = 'Adding...';
+  const { error } = await supabaseClient.from('user_faces').insert({
+    user_id: currentUser.id,
+    face_id: button.dataset.getFace
+  });
+
+  if (error && error.code !== '23505') {
+    button.disabled = false;
+    button.textContent = 'Get face';
+    setStatus(error.code === '42P01' || error.code === 'PGRST205'
+      ? 'Run the latest schema.sql to enable collecting faces.'
+      : error.message, 'error');
+    return;
+  }
+
+  setStatus('Face added to your collection.', 'success');
+  await loadCatalog();
+}
+
+function editOwnedGame(gameId) {
+  const game = currentOwnedGames.find((item) => item.id === gameId);
+  if (!game || !manageGameEditForm) {
+    return;
+  }
+
+  document.getElementById('manageEditGameId').value = game.id;
+  document.getElementById('manageEditHeading').textContent = `Edit ${game.title}`;
+  document.getElementById('manageEditGameTitle').value = game.title;
+  document.getElementById('manageEditVisibility').value = game.visibility;
+  manageGameEditForm.hidden = false;
+  manageGameEditForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function uploadHatModel(file, name) {
+  if (!file || !currentUser || !supabaseClient) {
+    throw new Error('Sign in before uploading a hat.');
+  }
+
+  if (!/\.glb$/i.test(file.name) || (file.type && file.type !== 'model/gltf-binary' && file.type !== 'application/octet-stream')) {
+    throw new Error('Choose a binary GLB model.');
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error('Hat models must be 10 MB or smaller.');
+  }
+
+  const path = `${currentUser.id}/${crypto.randomUUID()}.glb`;
+  const { error: uploadError } = await supabaseClient.storage
+    .from('hats')
+    .upload(path, file, { contentType: 'model/gltf-binary', upsert: false });
+
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data: publicUrl } = supabaseClient.storage.from('hats').getPublicUrl(path);
+  const { error: insertError } = await supabaseClient.from('hats').insert({
+    uploader_id: currentUser.id,
+    name,
+    model_path: path,
+    model_url: publicUrl.publicUrl
+  });
+
+  if (insertError) {
+    await supabaseClient.storage.from('hats').remove([path]);
+    throw insertError;
+  }
+}
+
+async function uploadFaceImage(file, name) {
+  if (!file || !currentUser || !supabaseClient) {
+    throw new Error('Sign in before uploading a face.');
+  }
+  if (file.type !== 'image/png' || !/\.png$/i.test(file.name)) {
+    throw new Error('Choose a PNG face image.');
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error('Face images must be 2 MB or smaller.');
+  }
+
+  const signature = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  if (signature.some((byte, index) => byte !== [137, 80, 78, 71, 13, 10, 26, 10][index])) {
+    throw new Error('The selected file is not a valid PNG image.');
+  }
+
+  const path = `${currentUser.id}/${crypto.randomUUID()}.png`;
+  const { error: uploadError } = await supabaseClient.storage
+    .from('faces')
+    .upload(path, file, { contentType: 'image/png', upsert: false });
+  if (uploadError) {
+    throw uploadError;
+  }
+
+  const { data: publicUrl } = supabaseClient.storage.from('faces').getPublicUrl(path);
+  const { error: insertError } = await supabaseClient.from('faces').insert({
+    uploader_id: currentUser.id,
+    name,
+    image_path: path,
+    image_url: publicUrl.publicUrl
+  });
+  if (insertError) {
+    await supabaseClient.storage.from('faces').remove([path]);
+    throw insertError;
+  }
+}
+
 async function loadGameDetail() {
   if (!gameDetail || !supabaseClient) {
     return;
@@ -863,6 +1351,135 @@ tabButtons.forEach((button) => {
     setActiveTab(button.dataset.tab);
     setStatus('');
   });
+});
+
+document.querySelectorAll('.creator-tab').forEach((tab) => {
+  tab.addEventListener('click', (event) => {
+    const selectedTab = event.currentTarget;
+    document.querySelectorAll('.creator-tab').forEach((candidate) => {
+      const active = candidate === selectedTab;
+      candidate.classList.toggle('active', active);
+      candidate.setAttribute('aria-selected', String(active));
+    });
+    document.querySelectorAll('.creator-panel').forEach((panel) => {
+      panel.hidden = panel.id !== selectedTab.dataset.creatorTab;
+      panel.classList.toggle('active', !panel.hidden);
+    });
+
+    if (selectedTab.dataset.creatorTab === 'manageGamesPanel') {
+      loadOwnedGames();
+    } else if (selectedTab.dataset.creatorTab === 'uploadHatsPanel') {
+      loadHatUploads();
+    }
+  });
+});
+
+document.getElementById('refreshOwnedGames')?.addEventListener('click', loadOwnedGames);
+
+ownedGamesList?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-edit-owned-game]');
+  if (button) {
+    editOwnedGame(button.dataset.editOwnedGame);
+  }
+});
+
+catalogList?.addEventListener('click', (event) => {
+  const faceButton = event.target.closest('[data-get-face]');
+  const hatButton = event.target.closest('[data-get-hat]');
+  if (faceButton) {
+    claimCatalogFace(faceButton);
+  } else if (hatButton) {
+    claimCatalogHat(hatButton);
+  }
+});
+
+document.getElementById('cancelManageGameEdit')?.addEventListener('click', () => {
+  manageGameEditForm.reset();
+  manageGameEditForm.hidden = true;
+  setStatus('');
+});
+
+manageGameEditForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const gameId = document.getElementById('manageEditGameId').value;
+  const game = currentOwnedGames.find((item) => item.id === gameId);
+  if (!supabaseClient || !currentUser || !game || game.owner_id !== currentUser.id) {
+    setStatus('Only the game owner can edit this game.', 'error');
+    return;
+  }
+
+  const title = document.getElementById('manageEditGameTitle').value.trim();
+  const worldFile = document.getElementById('manageEditWorldFile').files[0];
+  const thumbnailFile = document.getElementById('manageEditThumbnail').files[0];
+  const updates = {
+    title,
+    visibility: document.getElementById('manageEditVisibility').value
+  };
+
+  if (!title) {
+    setStatus('Enter a name for your game.', 'error');
+    return;
+  }
+
+  try {
+    if (worldFile) {
+      updates.world_data = await parseWorldFile(worldFile);
+    }
+    if (thumbnailFile) {
+      updates.thumbnail_url = await uploadGameThumbnail(thumbnailFile, game.id);
+    }
+
+    const { error } = await supabaseClient.from('games').update(updates).eq('id', game.id);
+    if (error) {
+      setStatus(error.message, 'error');
+      return;
+    }
+
+    setStatus('Game updated.', 'success');
+    manageGameEditForm.reset();
+    manageGameEditForm.hidden = true;
+    await loadOwnedGames();
+  } catch (error) {
+    setStatus(error.message || 'Could not update this game.', 'error');
+  }
+});
+
+hatUploadForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const name = document.getElementById('hatName').value.trim();
+  const file = document.getElementById('hatModelFile').files[0];
+  if (!name) {
+    setStatus('Enter a name for this hat.', 'error');
+    return;
+  }
+
+  try {
+    await uploadHatModel(file, name);
+    setStatus('Hat uploaded.', 'success');
+    hatUploadForm.reset();
+    await loadHatUploads();
+  } catch (error) {
+    setStatus(error.message || 'Could not upload this hat.', 'error');
+  }
+});
+
+faceUploadForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const name = document.getElementById('faceName').value.trim();
+  const file = document.getElementById('faceImageFile').files[0];
+  if (!name) {
+    setStatus('Enter a name for this face.', 'error');
+    return;
+  }
+
+  try {
+    await uploadFaceImage(file, name);
+    setStatus('Face uploaded to Catalog.', 'success');
+    faceUploadForm.reset();
+    await loadHatUploads();
+  } catch (error) {
+    setStatus(error.message || 'Could not upload this face.', 'error');
+  }
 });
 
 gameCreateForm?.addEventListener('submit', async (event) => {
@@ -1220,6 +1837,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadGameDetail();
     }
 
+    if (catalogList) {
+      await loadCatalog();
+    }
+
     if (session && signInForm) {
       setStatus('You are already signed in.', 'success');
     }
@@ -1242,6 +1863,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (gameDetail && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
       loadGameDetail();
+    }
+
+    if (catalogList && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
+      loadCatalog();
     }
 
     if (event === 'SIGNED_OUT') {
