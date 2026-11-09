@@ -1326,6 +1326,7 @@ async function loadGameDetail() {
   const isOwner = currentUser?.id === data.owner_id;
   gameTitleDisplay.textContent = data.title;
   gameVisibilityDisplay.textContent = isOwner ? data.visibility : 'public';
+  document.getElementById('playGameButton').href = `cubit://${encodeURIComponent(data.id)}`;
   const thumbnailDisplay = document.getElementById('gameThumbnailDisplay');
   if (thumbnailDisplay) {
     thumbnailDisplay.hidden = !data.thumbnail_url;

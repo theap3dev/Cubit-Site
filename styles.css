@@ -1344,6 +1344,9 @@ button {
 .game-page-detail .submit-btn,
 .game-page-detail .cancel-edit-btn,
 .game-page-detail .delete-game-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     min-height: 40px;
     margin: 0;
     padding: 8px 14px;
@@ -1352,6 +1355,7 @@ button {
     background: rgba(255, 255, 255, 0.08);
     color: #fff;
     cursor: pointer;
+    text-decoration: none;
 }
 
 .game-page-detail .delete-game-btn {
