@@ -1788,7 +1788,7 @@ document.querySelector('.welcome-icon')?.addEventListener('click', () => {
 });
 
 window.addEventListener('hashchange', () => {
-  if (document.body.classList.contains('home-page')) {
+  if (document.getElementById('homeShell')) {
     handleHomeRoute();
   }
 });
@@ -1819,7 +1819,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateAuthUI(session);
     updateHomeUser(session);
 
-    if (document.body.classList.contains('home-page')) {
+    if (document.getElementById('homeShell')) {
       const requestedPage = window.location.hash.slice(1);
       if (requestedPage === 'games') {
         window.location.replace('games.html');
@@ -1853,7 +1853,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateAuthUI(session);
     updateHomeUser(session);
 
-    if (document.body.classList.contains('home-page') && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
+    if (document.getElementById('homeShell') && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
       loadHomeGames();
       loadUsers();
     }

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Friends - Cubit</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Overpass+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=friends-20261109">
+</head>
+<body class="home-page">
+    <header class="topbar">
+        <div class="topbar-left">
+            <button class="menu-toggle" type="button" aria-label="Toggle menu" aria-expanded="true"></button>
+            <a class="brand-mark" href="index.html#home" aria-label="Cubit home">Cubit</a>
+        </div>
+        <div class="user-panel" aria-label="Current user">
+            <span class="user-name">ap3</span>
+            <button id="logoutBtn" class="logout-btn" type="button">[Logout]</button>
+        </div>
+    </header>
+
+    <div class="page-shell">
+        <aside class="sidebar" aria-label="Sidebar navigation">
+            <nav class="sidebar-nav">
+                <a class="nav-item" href="index.html#home">Home</a>
+                <a class="nav-item" href="index.html#users">Users</a>
+                <a class="nav-item" href="games.html">Games</a>
+                <a class="nav-item" href="catalog.html">Catalog</a>
+                <a class="nav-item" href="avatar.html">Avatar</a>
+                <a class="nav-item active" href="friends.html" aria-current="page">Friends</a>
+                <a id="createGameLink" class="nav-item" href="create.html" hidden>Create</a>
+            </nav>
+        </aside>
+
+        <main class="content friends-content">
+            <header class="section-header">
+                <h1>Friends</h1>
+            </header>
+
+            <p id="friendsPageStatus" class="status-message" role="status" aria-live="polite"></p>
+
+            <section class="friends-section" aria-labelledby="searchUsersHeading">
+                <h2 id="searchUsersHeading">Find users</h2>
+                <form id="userSearchForm" class="user-search-form" role="search">
+                    <label class="visually-hidden" for="userSearchInput">Search by username</label>
+                    <input id="userSearchInput" name="username" type="search" placeholder="Search usernames" autocomplete="off" required>
+                    <button class="friends-action" type="submit" aria-label="Search users">Search</button>
+                </form>
+                <div id="userSearchResults" class="friends-list" aria-live="polite"></div>
+            </section>
+
+            <section class="friends-section" aria-labelledby="incomingRequestsHeading">
+                <h2 id="incomingRequestsHeading">Friend requests</h2>
+                <div id="incomingFriendRequests" class="friends-list"></div>
+            </section>
+
+            <section class="friends-section" aria-labelledby="yourFriendsHeading">
+                <h2 id="yourFriendsHeading">Your friends</h2>
+                <div id="yourFriendsList" class="friends-list"></div>
+            </section>
+        </main>
+    </div>
+
+    <p id="statusMessage" hidden></p>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js?v=profile-avatar-20261107-final" defer></script>
+    <script src="friends.js?v=friends-20261109" defer></script>
+</body>
+</html>

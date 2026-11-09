@@ -48,6 +48,45 @@ create policy profiles_update_own
     using (id = (select auth.uid()))
     with check (id = (select auth.uid()));
 
+create table if not exists public.friend_requests (
+    id uuid primary key default gen_random_uuid(),
+    requester_id uuid not null references public.profiles(id) on delete cascade,
+    addressee_id uuid not null references public.profiles(id) on delete cascade,
+    status text not null default 'pending' check (status in ('pending', 'accepted')),
+    created_at timestamptz not null default now(),
+    check (requester_id <> addressee_id)
+);
+
+create unique index if not exists friend_requests_pair_idx
+    on public.friend_requests (least(requester_id, addressee_id), greatest(requester_id, addressee_id));
+
+create index if not exists friend_requests_addressee_status_idx
+    on public.friend_requests (addressee_id, status, created_at desc);
+
+alter table public.friend_requests enable row level security;
+
+grant select, insert on public.friend_requests to authenticated;
+grant update (status) on public.friend_requests to authenticated;
+
+drop policy if exists friend_requests_select_participant on public.friend_requests;
+create policy friend_requests_select_participant
+    on public.friend_requests for select to authenticated
+    using ((select auth.uid()) in (requester_id, addressee_id));
+
+drop policy if exists friend_requests_insert_requester on public.friend_requests;
+create policy friend_requests_insert_requester
+    on public.friend_requests for insert to authenticated
+    with check (
+        requester_id = (select auth.uid())
+        and status = 'pending'
+    );
+
+drop policy if exists friend_requests_accept_addressee on public.friend_requests;
+create policy friend_requests_accept_addressee
+    on public.friend_requests for update to authenticated
+    using (addressee_id = (select auth.uid()) and status = 'pending')
+    with check (addressee_id = (select auth.uid()) and status = 'accepted');
+
 create table if not exists public.hats (
     id uuid primary key default gen_random_uuid(),
     uploader_id uuid not null references auth.users(id) on delete cascade,
