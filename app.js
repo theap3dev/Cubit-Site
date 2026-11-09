@@ -498,6 +498,8 @@ async function loadUserProfile(profileId) {
   const username = document.getElementById('profileUsername');
   const joined = document.getElementById('profileJoined');
   const status = document.getElementById('profileStatus');
+  const friendButton = document.getElementById('profileFriendButton');
+  const friendStatus = document.getElementById('profileFriendStatus');
   const games = document.getElementById('profileGames');
   const gameCount = document.getElementById('profileGameCount');
 
@@ -508,6 +510,12 @@ async function loadUserProfile(profileId) {
   avatar.replaceChildren();
   username.textContent = '';
   joined.textContent = '';
+  if (friendButton) {
+    friendButton.hidden = true;
+    friendButton.disabled = true;
+    friendButton.dataset.profileId = profileId;
+  }
+  if (friendStatus) friendStatus.textContent = '';
   games.replaceChildren();
   gameCount.textContent = '';
   status.textContent = 'Loading profile...';
@@ -555,6 +563,7 @@ async function loadUserProfile(profileId) {
     }
 
     username.textContent = profile.username || 'User';
+    await loadProfileFriendAction(profile.id);
     const avatarImageUrl = resolveUserAvatarUrl(profile);
     renderProfileAvatarImage(avatar, (profile.username || 'U').slice(0, 1).toUpperCase(), avatarImageUrl || '');
     window.cubitProfileAvatarState = {
@@ -596,6 +605,92 @@ async function loadUserProfile(profileId) {
     console.error('Could not load profile.', error);
     status.textContent = 'Unable to load this profile right now.';
   }
+}
+
+async function loadProfileFriendAction(profileId) {
+  const button = document.getElementById('profileFriendButton');
+  const message = document.getElementById('profileFriendStatus');
+  if (!button || !message) return;
+
+  button.dataset.profileId = profileId;
+  button.hidden = true;
+  button.disabled = true;
+  message.textContent = '';
+
+  if (!currentUser || currentUser.id === profileId || !supabaseClient) return;
+
+  button.hidden = false;
+  button.textContent = 'Loading...';
+  const [outgoingResult, incomingResult] = await Promise.all([
+    supabaseClient.from('friend_requests').select('id, status')
+      .eq('requester_id', currentUser.id).eq('addressee_id', profileId).maybeSingle(),
+    supabaseClient.from('friend_requests').select('id, status')
+      .eq('requester_id', profileId).eq('addressee_id', currentUser.id).maybeSingle()
+  ]);
+
+  if (button.dataset.profileId !== profileId) return;
+
+  const error = outgoingResult.error || incomingResult.error;
+  if (error) {
+    button.hidden = true;
+    message.textContent = ['42P01', 'PGRST205'].includes(error.code)
+      ? 'Run the latest schema.sql to enable friend requests.'
+      : 'Friend request status could not be loaded.';
+    return;
+  }
+
+  const outgoing = outgoingResult.data;
+  const incoming = incomingResult.data;
+  const accepted = outgoing?.status === 'accepted' || incoming?.status === 'accepted';
+
+  if (accepted) {
+    button.textContent = 'Friends';
+    button.disabled = true;
+    button.dataset.action = '';
+  } else if (incoming?.status === 'pending') {
+    button.textContent = 'Accept request';
+    button.disabled = false;
+    button.dataset.action = 'accept';
+  } else if (outgoing?.status === 'pending') {
+    button.textContent = 'Request sent';
+    button.disabled = true;
+    button.dataset.action = '';
+  } else {
+    button.textContent = 'Add friend';
+    button.disabled = false;
+    button.dataset.action = 'send';
+  }
+
+  button.onclick = submitProfileFriendAction;
+}
+
+async function submitProfileFriendAction() {
+  const button = document.getElementById('profileFriendButton');
+  const message = document.getElementById('profileFriendStatus');
+  const profileId = button?.dataset.profileId;
+  if (!button || !message || !currentUser || !profileId || button.disabled) return;
+
+  const action = button.dataset.action;
+  button.disabled = true;
+  message.textContent = '';
+
+  const result = action === 'accept'
+    ? await supabaseClient.from('friend_requests').update({ status: 'accepted' })
+      .eq('requester_id', profileId).eq('addressee_id', currentUser.id).eq('status', 'pending')
+    : await supabaseClient.from('friend_requests').insert({
+      requester_id: currentUser.id,
+      addressee_id: profileId
+    });
+
+  if (result.error) {
+    message.textContent = action === 'accept'
+      ? 'Could not accept this friend request.'
+      : 'Could not send this friend request.';
+    await loadProfileFriendAction(profileId);
+    return;
+  }
+
+  await loadProfileFriendAction(profileId);
 }
 
 async function loadUsers() {
@@ -1788,7 +1883,7 @@ document.querySelector('.welcome-icon')?.addEventListener('click', () => {
 });
 
 window.addEventListener('hashchange', () => {
-  if (document.getElementById('homeShell')) {
+  if (document.body.classList.contains('home-page')) {
     handleHomeRoute();
   }
 });
@@ -1819,7 +1914,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateAuthUI(session);
     updateHomeUser(session);
 
-    if (document.getElementById('homeShell')) {
+    if (document.body.classList.contains('home-page')) {
       const requestedPage = window.location.hash.slice(1);
       if (requestedPage === 'games') {
         window.location.replace('games.html');
@@ -1853,7 +1948,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateAuthUI(session);
     updateHomeUser(session);
 
-    if (document.getElementById('homeShell') && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
+    const profileView = document.getElementById('profileView');
+    if (profileView?.classList.contains('active-view')) {
+      loadProfileFriendAction(document.getElementById('profileFriendButton')?.dataset.profileId);
+    }
+
+    if (document.body.classList.contains('home-page') && (event === 'SIGNED_IN' || event === 'SIGNED_OUT')) {
       loadHomeGames();
       loadUsers();
     }

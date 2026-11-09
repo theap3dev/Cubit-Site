@@ -10,7 +10,7 @@
     <script type="importmap">
         {"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js"}}
     </script>
-    <link rel="stylesheet" href="styles.css?v=profile-3d-20261107">
+    <link rel="stylesheet" href="styles.css?v=profile-friend-20261109">
 </head>
 <body class="auth-page">
     <div id="authShell" class="auth-shell">
@@ -114,6 +114,8 @@
                             <div>
                                 <h1 id="profileUsername"></h1>
                                 <p id="profileJoined"></p>
+                                <button id="profileFriendButton" class="friends-action profile-friend-action" type="button" hidden></button>
+                                <p id="profileFriendStatus" class="profile-friend-status" role="status" aria-live="polite"></p>
                             </div>
                         </header>
                         <section class="profile-avatar-showcase" aria-labelledby="profileAvatarHeading">
@@ -139,7 +141,7 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js?v=profile-avatar-20261107-final" defer></script>
+    <script src="app.js?v=profile-friend-20261109" defer></script>
     <script type="module" src="profile-avatar.js?v=profile-avatar-20261107-final"></script>
 </body>
 </html>

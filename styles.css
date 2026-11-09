@@ -208,7 +208,6 @@ button {
     line-height: 1;
     letter-spacing: 0.02em;
     color: #f2f2f2;
-    text-decoration: none;
 }
 
 .brand-mark::before {
@@ -805,6 +804,21 @@ button {
 .profile-header p {
     margin: 8px 0 0;
     color: rgba(255, 255, 255, 0.72);
+}
+
+.profile-friend-action {
+    margin-top: 12px;
+}
+
+.profile-friend-status {
+    min-height: 0;
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.profile-friend-status:empty {
+    display: none;
 }
 
 .profile-avatar-showcase {
